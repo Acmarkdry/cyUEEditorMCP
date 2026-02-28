@@ -260,6 +260,25 @@ protected:
 
 
 /**
+ * FGetSelectedAssetsAction
+ * Returns a list of currently selected assets in the Content Browser.
+ * No parameters required — returns paths, names, class info, and package paths
+ * of all assets selected in Content Browser at the time of the call.
+ * Action ID: editor.get_selected_assets
+ */
+class UEEDITORMCP_API FGetSelectedAssetsAction : public FEditorAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override { return true; }
+	virtual FString GetActionName() const override { return TEXT("get_selected_assets"); }
+	virtual bool RequiresSave() const override { return false; }
+};
+
+
+/**
  * FGetBlueprintSummaryAction
  * Get a comprehensive summary of a Blueprint's internal implementation:
  * variables, functions, event graphs, components, parent class, compile status, etc.

@@ -431,3 +431,125 @@ FString FDiffAgainstDepotAction::DiffCategoryToString(int32 Category)
 	default:                       return TEXT("UNKNOWN");
 	}
 }
+
+// =====================================================================
+// FGetAssetHistoryAction
+// =====================================================================
+
+bool FGetAssetHistoryAction::Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError)
+{
+	if (!GetRequiredString(Params, TEXT("asset_path"), AssetPath, OutError))
+	{
+		return false;
+	}
+
+	ISourceControlModule& SCModule = ISourceControlModule::Get();
+	if (!SCModule.IsEnabled())
+	{
+		OutError = TEXT("Source control is not enabled in this editor session.");
+		return false;
+	}
+
+	ISourceControlProvider& Provider = SCModule.GetProvider();
+	if (!Provider.IsAvailable())
+	{
+		OutError = TEXT("Source control provider is not available / not connected.");
+		return false;
+	}
+
+	return true;
+}
+
+TSharedPtr<FJsonObject> FGetAssetHistoryAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	// ------------------------------------------------------------------
+	// 1. Resolve package path to disk file
+	// ------------------------------------------------------------------
+	UObject* LocalObject = StaticLoadObject(UObject::StaticClass(), nullptr, *AssetPath);
+	if (!LocalObject)
+	{
+		return CreateErrorResponse(FString::Printf(TEXT("Failed to load asset: %s"), *AssetPath));
+	}
+
+	const FString PackagePath = LocalObject->GetOutermost()->GetName();
+	const FString DiskFilename = USourceControlHelpers::PackageFilename(PackagePath);
+
+	// ------------------------------------------------------------------
+	// 2. Update source control history
+	// ------------------------------------------------------------------
+	ISourceControlProvider& Provider = ISourceControlModule::Get().GetProvider();
+
+	TSharedRef<FUpdateStatus, ESPMode::ThreadSafe> UpdateOp = ISourceControlOperation::Create<FUpdateStatus>();
+	UpdateOp->SetUpdateHistory(true);
+
+	ECommandResult::Type UpdateResult = Provider.Execute(UpdateOp, DiskFilename);
+	if (UpdateResult != ECommandResult::Succeeded)
+	{
+		return CreateErrorResponse(FString::Printf(
+			TEXT("Source control UpdateStatus failed for %s (result=%d)"), *AssetPath, static_cast<int32>(UpdateResult)));
+	}
+
+	// ------------------------------------------------------------------
+	// 3. Get file state & history
+	// ------------------------------------------------------------------
+	FSourceControlStatePtr State = Provider.GetState(DiskFilename, EStateCacheUsage::Use);
+	if (!State.IsValid())
+	{
+		return CreateErrorResponse(FString::Printf(TEXT("Cannot get source control state for %s"), *AssetPath));
+	}
+
+	if (!State->IsSourceControlled())
+	{
+		return CreateErrorResponse(FString::Printf(TEXT("Asset is not under source control: %s"), *AssetPath));
+	}
+
+	const int32 HistorySize = State->GetHistorySize();
+	if (HistorySize == 0)
+	{
+		return CreateErrorResponse(FString::Printf(TEXT("No source control history for %s"), *AssetPath));
+	}
+
+	// ------------------------------------------------------------------
+	// 4. Build revision list
+	// ------------------------------------------------------------------
+	int32 MaxCount = static_cast<int32>(GetOptionalNumber(Params, TEXT("max_count"), 0));
+	if (MaxCount <= 0)
+	{
+		MaxCount = HistorySize;
+	}
+	else
+	{
+		MaxCount = FMath::Min(MaxCount, HistorySize);
+	}
+
+	TArray<TSharedPtr<FJsonValue>> RevisionsArray;
+	for (int32 i = 0; i < MaxCount; ++i)
+	{
+		TSharedPtr<ISourceControlRevision, ESPMode::ThreadSafe> Revision = State->GetHistoryItem(i);
+		if (!Revision.IsValid())
+		{
+			continue;
+		}
+
+		TSharedPtr<FJsonObject> RevObj = MakeShared<FJsonObject>();
+		RevObj->SetStringField(TEXT("revision"), Revision->GetRevision());
+		RevObj->SetNumberField(TEXT("revisionNumber"), Revision->GetCheckInIdentifier());
+		RevObj->SetStringField(TEXT("date"), Revision->GetDate().ToString());
+		RevObj->SetStringField(TEXT("userName"), Revision->GetUserName());
+		RevObj->SetStringField(TEXT("description"), Revision->GetDescription());
+		RevObj->SetStringField(TEXT("action"), Revision->GetAction());
+
+		RevisionsArray.Add(MakeShared<FJsonValueObject>(RevObj));
+	}
+
+	// ------------------------------------------------------------------
+	// 5. Build response
+	// ------------------------------------------------------------------
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("assetPath"), AssetPath);
+	Result->SetNumberField(TEXT("totalRevisions"), RevisionsArray.Num());
+	Result->SetNumberField(TEXT("historyAvailable"), HistorySize);
+	Result->SetArrayField(TEXT("revisions"), RevisionsArray);
+
+	return CreateSuccessResponse(Result);
+}

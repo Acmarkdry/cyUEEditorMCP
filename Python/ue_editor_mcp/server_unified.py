@@ -221,7 +221,11 @@ TOOLS = [
         name="ue_actions_run",
         description=(
             "Execute a single action in Unreal Engine. "
-            "Use ue_actions_search + ue_actions_schema first to discover the required parameters."
+            "Use ue_actions_search + ue_actions_schema first to discover the required parameters. "
+            "IMPORTANT: You may pass action parameters in TWO ways — "
+            "(A) nested under 'params' key: {\"action_id\": \"x\", \"params\": {\"foo\": 1}} "
+            "(B) flat top-level keys alongside action_id: {\"action_id\": \"x\", \"foo\": 1} "
+            "Both forms are accepted. Use (B) when the params schema is opaque."
         ),
         inputSchema={
             "type": "object",
@@ -233,7 +237,10 @@ TOOLS = [
                 "params": {
                     "type": "object",
                     "additionalProperties": True,
-                    "description": "Action parameters matching the schema from ue_actions_schema",
+                    "description": (
+                        "Action parameters matching the schema from ue_actions_schema. "
+                        "Alternative: pass parameters as flat top-level keys alongside action_id."
+                    ),
                 },
             },
             "required": ["action_id"],
@@ -256,7 +263,11 @@ TOOLS = [
                         "type": "object",
                         "properties": {
                             "action_id": {"type": "string"},
-                            "params": {"type": "object", "additionalProperties": True},
+                            "params": {
+                                "type": "object",
+                                "additionalProperties": True,
+                                "description": "Action parameters. Can also be passed as flat top-level keys alongside action_id.",
+                            },
                         },
                         "required": ["action_id"],
                     },

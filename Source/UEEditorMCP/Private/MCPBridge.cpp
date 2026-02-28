@@ -98,6 +98,7 @@ void UMCPBridge::RegisterActions()
 	ActionHandlers.Add(TEXT("list_assets"), MakeShared<FListAssetsAction>());
 	ActionHandlers.Add(TEXT("rename_assets"), MakeShared<FRenameAssetsAction>());
 	ActionHandlers.Add(TEXT("get_selected_asset_thumbnail"), MakeShared<FGetSelectedAssetThumbnailAction>());
+	ActionHandlers.Add(TEXT("get_selected_assets"), MakeShared<FGetSelectedAssetsAction>());
 	ActionHandlers.Add(TEXT("get_blueprint_summary"), MakeShared<FGetBlueprintSummaryAction>());
 	ActionHandlers.Add(TEXT("describe_blueprint_full"), MakeShared<FDescribeFullAction>());
 	ActionHandlers.Add(TEXT("get_editor_logs"), MakeShared<FGetEditorLogsAction>());
@@ -314,6 +315,7 @@ void UMCPBridge::RegisterActions()
 	// Diff Actions (Source Control)
 	// =========================================================================
 	ActionHandlers.Add(TEXT("diff_against_depot"), MakeShared<FDiffAgainstDepotAction>());
+	ActionHandlers.Add(TEXT("get_asset_history"), MakeShared<FGetAssetHistoryAction>());
 
 	// =========================================================================
 	// P6: PIE Control Actions

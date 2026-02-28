@@ -516,6 +516,35 @@ def _handle_asset_diff_get(args: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def _handle_asset_history_get(args: dict[str, Any]) -> dict[str, Any]:
+    """Get source-control revision history for a given asset."""
+    if not _is_ue_reachable():
+        return {
+            "success": False,
+            "error": "UE 不可达，无法获取资产历史",
+            "notes": ["请先启动 Unreal Editor 并确保 UEEditorMCP 连接可用，且 Source Control 已连接"],
+        }
+
+    asset_path = args.get("assetPath")
+    if not isinstance(asset_path, str) or not asset_path.strip():
+        return {
+            "success": False,
+            "error": "缺少必填参数 assetPath",
+            "notes": ["请提供完整资产路径，如 /Game/P110_2/Blueprints/Character/Player/BP_SideScrollingCharacter"],
+        }
+
+    params: dict[str, Any] = {"asset_path": asset_path.strip()}
+
+    max_count = args.get("maxCount")
+    if isinstance(max_count, int) and max_count > 0:
+        params["max_count"] = max_count
+
+    result = get_connection().send_command("get_asset_history", params).to_dict()
+    if result.get("success") and "notes" not in result:
+        result["notes"] = []
+    return result
+
+
 def _handle_asset_thumbnail_get(args: dict[str, Any]) -> dict[str, Any]:
     if not _is_ue_reachable():
         return {
@@ -572,6 +601,24 @@ TOOLS = [
                 "revision": {
                     "type": "integer",
                     "description": "Optional specific revision number to diff against (default: latest)",
+                },
+            },
+            "required": ["assetPath"],
+        },
+    ),
+    Tool(
+        name="unreal.asset_history.get",
+        description="List source-control revision history for a given asset. Returns an array of revisions that actually modified the file (up to ~100 for SVN). Use this to discover valid revision numbers before calling unreal.asset_diff.get. Requires UE Editor running with Source Control connected.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "assetPath": {
+                    "type": "string",
+                    "description": "Full asset path, e.g. /Game/P110_2/Blueprints/BP_Foo",
+                },
+                "maxCount": {
+                    "type": "integer",
+                    "description": "Maximum number of revisions to return (default: all available, up to ~100)",
                 },
             },
             "required": ["assetPath"],
@@ -676,7 +723,7 @@ async def list_tools() -> list[Tool]:
 
 @server.call_tool()
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent | ImageContent]:
-    if name not in {"unreal.logs.get", "unreal.asset_thumbnail.get", "unreal.asset_diff.get"}:
+    if name not in {"unreal.logs.get", "unreal.asset_thumbnail.get", "unreal.asset_diff.get", "unreal.asset_history.get"}:
         text = json.dumps({"success": False, "error": f"Unknown tool: {name}"}, ensure_ascii=False)
         return [TextContent(type="text", text=text)]
 
@@ -685,6 +732,8 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent | 
             result = _handle_unreal_logs_get(arguments or {})
         elif name == "unreal.asset_diff.get":
             result = _handle_asset_diff_get(arguments or {})
+        elif name == "unreal.asset_history.get":
+            result = _handle_asset_history_get(arguments or {})
         else:
             result = _handle_asset_thumbnail_get(arguments or {})
     except Exception as exc:

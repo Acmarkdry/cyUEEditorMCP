@@ -1703,6 +1703,45 @@ TSharedPtr<FJsonObject> FGetSelectedAssetThumbnailAction::ExecuteInternal(const 
 
 
 // ========================================================================
+// FGetSelectedAssetsAction
+// ========================================================================
+
+TSharedPtr<FJsonObject> FGetSelectedAssetsAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	TArray<FAssetData> SelectedAssets;
+	AssetSelectionUtils::GetSelectedAssets(SelectedAssets);
+
+	if (SelectedAssets.IsEmpty())
+	{
+		return CreateErrorResponse(
+			TEXT("No assets are currently selected in the Content Browser."),
+			TEXT("no_selection")
+		);
+	}
+
+	TArray<TSharedPtr<FJsonValue>> AssetsArray;
+
+	for (const FAssetData& AssetData : SelectedAssets)
+	{
+		TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
+		AssetObj->SetStringField(TEXT("asset_name"), AssetData.AssetName.ToString());
+		AssetObj->SetStringField(TEXT("asset_path"), AssetData.GetObjectPathString());
+		AssetObj->SetStringField(TEXT("package_name"), AssetData.PackageName.ToString());
+		AssetObj->SetStringField(TEXT("package_path"), AssetData.PackagePath.ToString());
+		AssetObj->SetStringField(TEXT("asset_class"), AssetData.AssetClassPath.GetAssetName().ToString());
+		AssetObj->SetStringField(TEXT("asset_class_path"), AssetData.AssetClassPath.ToString());
+		AssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
+	}
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetNumberField(TEXT("count"), SelectedAssets.Num());
+	Result->SetArrayField(TEXT("assets"), AssetsArray);
+
+	return CreateSuccessResponse(Result);
+}
+
+
+// ========================================================================
 // FGetBlueprintSummaryAction
 // ========================================================================
 

@@ -586,6 +586,24 @@ _EDITOR_ACTIONS = [
         ),
     ),
     ActionDef(
+        id="editor.get_selected_assets",
+        command="get_selected_assets",
+        tags=("editor", "assets", "selection", "list", "content-browser", "read"),
+        description=(
+            "List the assets currently selected in the Content Browser. "
+            "Returns asset_name, asset_path, package_path, asset_class, and asset_class_path "
+            "for each selected asset. No parameters required."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {},
+        },
+        capabilities=("read",),
+        examples=(
+            {},
+        ),
+    ),
+    ActionDef(
         id="editor.diff_against_depot",
         command="diff_against_depot",
         tags=("editor", "diff", "source-control", "svn", "revision", "compare", "debug", "read"),
@@ -614,6 +632,37 @@ _EDITOR_ACTIONS = [
         examples=(
             {"asset_path": "/Game/P110_2/Blueprints/Character/Player/BP_SideScrollingCharacter"},
             {"asset_path": "/Game/P110_2/Blueprints/BP_SideScrollingGameMode", "revision": 42},
+        ),
+    ),
+    ActionDef(
+        id="editor.get_asset_history",
+        command="get_asset_history",
+        tags=("editor", "source-control", "svn", "revision", "history", "read"),
+        description=(
+            "List source-control revision history for a given asset. "
+            "Returns an array of revisions that actually modified the file "
+            "(up to the SVN provider limit of 100). "
+            "Use this to discover valid revision numbers before calling diff_against_depot."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "asset_path": {
+                    "type": "string",
+                    "description": "Full asset path (e.g. /Game/P110_2/Blueprints/BP_Foo)",
+                },
+                "max_count": {
+                    "type": "integer",
+                    "description": "Maximum number of revisions to return (default: all available, up to ~100)",
+                },
+            },
+            "required": ["asset_path"],
+        },
+        capabilities=("read",),
+        risk="safe",
+        examples=(
+            {"asset_path": "/Game/P110_2/Blueprints/Character/Player/BP_SideScrollingCharacter"},
+            {"asset_path": "/Game/P110_2/Blueprints/BP_Foo", "max_count": 10},
         ),
     ),
     ActionDef(

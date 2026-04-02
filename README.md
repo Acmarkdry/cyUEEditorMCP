@@ -2,7 +2,7 @@
 
 > 基于 [lilklon/UEBlueprintMCP](https://github.com/lilklon/UEBlueprintMCP) 和 [yangskin/UEEditorMCP](https://github.com/yangskin/UEEditorMCP) 扩展，感谢两位作者的贡献。
 
-面向 AI 辅助开发的 MCP 插件，用于 Unreal Engine 5.7+ 编辑器操作。
+面向 AI 辅助开发的 MCP 插件，用于 Unreal Engine 5.6+ 编辑器操作。
 
 **7 个固定 MCP 工具 · 159 个动作 · 持久 TCP 连接 · 仅限编辑器**
 
@@ -57,7 +57,3 @@
 ## 许可证
 
 MIT
-
-原始代码版权归 [@lilklon](https://github.com/lilklon) 所有。  
-架构重构与功能增强版权归 [@yangskin](https://github.com/yangskin) 所有。  
-后续扩展版权归 acmarkdry 所有。

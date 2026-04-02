@@ -1,5 +1,5 @@
 """
-Unified MCP Server — single server with exactly 7 fixed tools.
+Unified MCP Server — single server with exactly 8 fixed tools.
 
 Replaces 6 separate servers (ue-editor, ue-blueprint, ue-bp-nodes,
 ue-bp-graph, ue-materials, ue-umg) with one ``ue-editor-mcp`` server that
@@ -11,8 +11,13 @@ exposes:
     5. ue_batch          — execute multiple actions atomically
     6. ue_resources_read — read embedded documentation
     7. ue_logs_tail      — tail recent command log
+    8. ue_skills         — on-demand skill catalog (list / load)
 
-AI workflow:  search → schema → run  (3 round-trips for any operation)
+AI workflow (skill-based, preferred):
+    ue_skills(list) → ue_skills(load, skill_id) → ue_actions_run / ue_batch
+
+AI workflow (legacy search-based):
+    ue_actions_search → ue_actions_schema → ue_actions_run
 """
 
 from __future__ import annotations
@@ -31,6 +36,7 @@ from mcp.types import Tool, TextContent, ImageContent
 
 from .connection import get_connection, CommandResult
 from .registry import get_registry
+from .skills import get_skill_list, load_skill
 
 
 def _to_serializable(obj: Any) -> Any:
@@ -324,6 +330,32 @@ TOOLS = [
             },
         },
     ),
+    Tool(
+        name="ue_skills",
+        description=(
+            "Load domain-specific action catalogs (skills) on demand. "
+            "Use action='list' to see all available skill domains with descriptions. "
+            "Use action='load' with a skill_id to get the full action schemas, examples, "
+            "and workflow tips for that domain. "
+            "This replaces the search→schema workflow — load a skill once, then call "
+            "ue_actions_run or ue_batch directly with the action IDs and parameters from the skill."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list", "load"],
+                    "description": "'list' = show skill catalog index, 'load' = load full skill content",
+                },
+                "skill_id": {
+                    "type": "string",
+                    "description": "Skill ID to load (required when action='load'). Get IDs from action='list'.",
+                },
+            },
+            "required": ["action"],
+        },
+    ),
 ]
 
 
@@ -559,6 +591,29 @@ def _handle_tool(name: str, args: dict) -> Any:
             del result["python_log"]
 
         return result
+
+    # ── 8. ue_skills ────────────────────────────────────────────────
+    if name == "ue_skills":
+        action = args.get("action", "")
+
+        if action == "list":
+            return {
+                "success": True,
+                "skills": get_skill_list(),
+                "usage_hint": "Call ue_skills(action='load', skill_id='<id>') to get full action schemas and workflow tips for a domain.",
+            }
+
+        if action == "load":
+            skill_id = args.get("skill_id", "")
+            if not skill_id:
+                return {"success": False, "error": "skill_id is required when action='load'"}
+            skill_data = load_skill(skill_id)
+            if skill_data is None:
+                available = [s["skill_id"] for s in get_skill_list()]
+                return {"success": False, "error": f"Unknown skill_id: '{skill_id}'", "available": available}
+            return {"success": True, **skill_data}
+
+        return {"success": False, "error": f"Unknown action: '{action}'. Use 'list' or 'load'."}
 
     return {"success": False, "error": f"Unknown tool: {name}"}
 

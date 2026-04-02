@@ -69,10 +69,3 @@ D:\UnrealEngine5\UnrealEngine\Engine\Build\BatchFiles\Build.bat LyraEditor Win64
 4. 重复直到编译通过（`Result: Succeeded`）
 5. 提交代码
 
-### 版本兼容注意事项
-
-本插件代码基于 UE 5.7 API 编写，运行在 UE 5.6 上，需注意：
-- 使用 `ENGINE_MAJOR_VERSION` / `ENGINE_MINOR_VERSION` 条件编译处理 API 差异
-- 5.7 新增的枚举值（如 `EDiffType::CUSTOM_OBJECT`）需要 `#if` 包裹
-- 5.7 改签名的 API（如 `GetMaterialResource`）需要提供 5.6 的替代调用
-- 编译错误中出现 "is not a member of" 或 "no overloaded function" 通常是版本差异

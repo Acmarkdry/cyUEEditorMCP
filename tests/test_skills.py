@@ -52,9 +52,7 @@ def test_load_all_skills():
         assert data["skill_id"] == skill_def.id
         assert data["action_count"] > 0
         assert isinstance(data["actions"], list)
-        # Doc-only skills (no action_ids) may have action_count=1 from workflow file
-        if skill_def.action_ids:
-            assert len(data["actions"]) == data["action_count"]
+        assert len(data["actions"]) == data["action_count"]
         # Each action should have id, command, input_schema
         for action in data["actions"]:
             assert "id" in action

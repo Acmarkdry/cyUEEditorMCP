@@ -45,3 +45,34 @@ Kiro ──MCP──▶ Python Server (8 tools) ──TCP──▶ UE Editor Plu
 - Material 修改后必须 `material.compile`
 - 优先用 `ue_batch` 减少往返
 - 节点位置 `[X, Y]`；Actor 位置 `[X, Y, Z]`；颜色 `[R, G, B, A]` 值域 0–1
+
+## UE 编译环境
+
+- UE 引擎目录：`D:\UnrealEngine5\UnrealEngine\`
+- 项目目录：`D:\UnrealGame\Lyra_56\`
+- 项目文件：`D:\UnrealGame\Lyra_56\Lyra_56.uproject`
+- 插件目录（当前工作区）：`D:\UnrealGame\Lyra_56\Plugins\UEEditorMCP\`
+- 引擎版本：UE 5.6（源码编译版）
+- 编译目标：`LyraEditor`
+
+### 编译命令
+
+```
+D:\UnrealEngine5\UnrealEngine\Engine\Build\BatchFiles\Build.bat LyraEditor Win64 Development "D:\UnrealGame\Lyra_56\Lyra_56.uproject" -WaitMutex
+```
+
+### C++ 修改后的工作流
+
+1. 修改 C++ 代码
+2. 执行编译命令，过滤错误输出：`... 2>&1 | Select-Object -Last 60`
+3. 如果有编译错误，分析并修复
+4. 重复直到编译通过（`Result: Succeeded`）
+5. 提交代码
+
+### 版本兼容注意事项
+
+本插件代码基于 UE 5.7 API 编写，运行在 UE 5.6 上，需注意：
+- 使用 `ENGINE_MAJOR_VERSION` / `ENGINE_MINOR_VERSION` 条件编译处理 API 差异
+- 5.7 新增的枚举值（如 `EDiffType::CUSTOM_OBJECT`）需要 `#if` 包裹
+- 5.7 改签名的 API（如 `GetMaterialResource`）需要提供 5.6 的替代调用
+- 编译错误中出现 "is not a member of" 或 "no overloaded function" 通常是版本差异

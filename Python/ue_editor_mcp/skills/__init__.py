@@ -189,6 +189,38 @@ SKILL_DEFS: list[SkillDef] = [
         ),
         workflows_file="layout.md",
     ),
+    SkillDef(
+        id="animgraph",
+        name="AnimGraph 动画图",
+        description="Animation Blueprint 完整操作：读取 AnimGraph 结构、状态机、转换规则；创建动画蓝图；添加/删除状态和转换；添加动画节点；连接/断开节点；设置节点属性；编译动画蓝图。",
+        action_ids=(
+            # Read
+            "animgraph.list_graphs",
+            "animgraph.describe_topology",
+            "animgraph.get_state_machine",
+            "animgraph.get_state_subgraph",
+            "animgraph.get_transition_rule",
+            # Create
+            "animgraph.create_blueprint",
+            "animgraph.add_state_machine",
+            # Modify — states
+            "animgraph.add_state",
+            "animgraph.remove_state",
+            "animgraph.rename_state",
+            # Modify — transitions
+            "animgraph.add_transition",
+            "animgraph.remove_transition",
+            "animgraph.set_transition_priority",
+            # Modify — nodes
+            "animgraph.add_node",
+            "animgraph.set_node_property",
+            "animgraph.connect_nodes",
+            "animgraph.disconnect_node",
+            # Compile
+            "animgraph.compile",
+        ),
+        workflows_file="animgraph.md",
+    ),
 ]
 
 # Build lookup

@@ -43,6 +43,8 @@ public class UEEditorMCP : ModuleRules
 			"ModelViewViewModel",           // MVVM runtime types (EMVVMBindingMode, EMVVMExecutionMode)
 			"ModelViewViewModelBlueprint",  // MVVM editor-time binding API (UMVVMBlueprintView, etc.)
 			"FieldNotification",            // INotifyFieldValueChanged interface
+			"AnimGraph",                    // UAnimGraphNode_Base, state machine node types (Editor-only)
+			"AnimGraphRuntime",             // Runtime anim node type definitions (Editor-only module)
 		});
 
 		// Ensure proper RTTI/exceptions for crash handling

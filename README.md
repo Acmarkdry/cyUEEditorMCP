@@ -3,11 +3,14 @@
 > **基于 [lilklon/UEBlueprintMCP](https://github.com/lilklon/UEBlueprintMCP) 修改扩展。**  
 > 原项目采用 **MIT 协议**，本插件在其基础上进行了大量重构与功能增强，同样遵循 MIT 协议发布。  
 > 感谢 [@lilklon](https://github.com/lilklon) 提供的架构基础。
+>
+> **本项目 fork 自 [Acmarkdry/UEEditorMCP](https://github.com/Acmarkdry/UEEditorMCP)。**  
+> 感谢 [@Acmarkdry](https://github.com/Acmarkdry) 在架构重构与功能增强方面的贡献，本项目在其基础上进一步扩展了 AnimGraph 完整操作能力。
 
 ---
 
 一个面向 AI 辅助开发的 MCP 插件，用于 Unreal Engine 5.7+ 蓝图操作。  
-对外暴露 **7 个固定 MCP 工具**，由后端 **动作注册表（Action Registry）** 驱动，支持 141 个动作，提供持久 TCP 连接、多客户端支持与自动保存。
+对外暴露 **7 个固定 MCP 工具**，由后端 **动作注册表（Action Registry）** 驱动，支持 159 个动作，提供持久 TCP 连接、多客户端支持与自动保存。
 
 同时包含一个可选的**独立日志 MCP 服务器**（`ue-editor-mcp-logs`），暴露 `unreal.logs.get`、`unreal.asset_thumbnail.get` 和 `unreal.asset_diff.get` 三个工具。
 
@@ -16,7 +19,7 @@
 ## 功能特性
 
 - **7 个固定 MCP 工具** — 单一 `ue-editor-mcp` 服务器，工具接口永远不变
-- **141 个动作** — 蓝图、图节点、材质、UMG 控件、MVVM、增强输入、组件事件绑定、PIE 启停/状态查询、日志断言、Outliner 管理、资产缩略图提取、批量资产重命名及重定向修复、与版本控制仓库的差异对比 — 均可通过动作注册表动态发现
+- **159 个动作** — 蓝图、图节点、材质、UMG 控件、MVVM、增强输入、组件事件绑定、PIE 启停/状态查询、日志断言、Outliner 管理、资产缩略图提取、批量资产重命名及重定向修复、与版本控制仓库的差异对比、AnimGraph 动画蓝图完整操作 — 均可通过动作注册表动态发现
 - **搜索 → 模式 → 执行** — AI 动态发现动作，无需记忆命令名
 - **批量执行** — `ue_batch` 通过 C++ `batch_execute` 在**单次 TCP 往返**中执行最多 50 个动作
 - **多客户端 TCP** — 端口 55558，最多支持 8 路并发连接（每连接独立线程）
@@ -109,6 +112,7 @@ ue_batch(actions=[
 | `material.*` | 16 | 材质创建、编辑、编译诊断、图检视与布局、关卡应用、编辑器刷新 | `material.create`、`material.add_expression`、`material.compile`、`material.get_summary`、`material.auto_layout`、`material.auto_comment`、`material.remove_expression`、`material.apply_to_component`、`material.apply_to_actor`、`material.refresh_editor` |
 | `widget.*` | 21 | UMG 控件蓝图（24 种类型）+ MVVM | `widget.create`、`widget.add_component`、`widget.mvvm_add_viewmodel`、`widget.mvvm_remove_viewmodel` |
 | `input.*` | 4 | 增强输入系统 | `input.create_action`、`input.create_mapping_context` |
+| `animgraph.*` | 18 | AnimGraph 读取/创建/修改/编译 | `animgraph.list_graphs`、`animgraph.create_blueprint`、`animgraph.compile` |
 
 ### 编译诊断（重要）
 
@@ -370,12 +374,15 @@ TCP 服务器、所有 MCP 工具以及所有蓝图操作代码**仅存在于编
 |------|------|
 | `Python/ue_editor_mcp/server_unified.py` | 单一 MCP 服务器，7 个工具，动作分发 |
 | `Python/ue_editor_mcp/registry/__init__.py` | ActionRegistry 类，关键字搜索引擎 |
-| `Python/ue_editor_mcp/registry/actions.py` | 141 个带模式/标签/示例的 ActionDef 条目 |
+| `Python/ue_editor_mcp/registry/actions.py` | 159 个带模式/标签/示例的 ActionDef 条目 |
 | `Python/ue_editor_mcp/resources/*.md` | 供 `ue_resources_read` 使用的嵌入式文档 |
 | `Python/ue_editor_mcp/connection.py` | `PersistentUnrealConnection`（TCP、心跳、自动重连） |
 | `Source/Private/MCPServer.cpp` | TCP Accept 循环 + 每客户端处理线程 |
 | `Source/Private/MCPBridge.cpp` | 动作处理器注册表（~150 条命令） |
 | `Source/Private/Actions/*.cpp` | `FEditorAction` 子类具体实现 |
+| `Source/Private/Actions/AnimGraphActions.cpp` | AnimGraph 全部 18 个 Action 实现（辅助函数 + 只读 + 写入） |
+| `Source/Public/Actions/AnimGraphActions.h` | AnimGraph Action 类声明与 `AnimGraphHelpers` 命名空间 |
+| `Python/ue_editor_mcp/skills/animgraph.md` | AnimGraph 工作流提示（读取/创建/修改/编译流程） |
 
 ## 环境要求
 
@@ -390,6 +397,17 @@ TCP 服务器、所有 MCP 工具以及所有蓝图操作代码**仅存在于编
 ### 阶段一：统一服务器 + 动作注册表 ✅
 
 7 工具统一 MCP 服务器，动作注册表（141 个动作）、关键字搜索、批量执行、嵌入式文档和结构化日志——**全部完成**。
+
+### AnimGraph 完整操作扩展 ✅
+
+| # | 功能 | 说明 | 状态 |
+|---|------|------|------|
+| AG.1 | 只读 Action（5 个） | `animgraph.list_graphs`、`animgraph.describe_topology`、`animgraph.get_state_machine`、`animgraph.get_state_subgraph`、`animgraph.get_transition_rule` | ✅ |
+| AG.2 | 创建 Action | `animgraph.create_blueprint`（使用 `UAnimBlueprintFactory`） | ✅ |
+| AG.3 | 状态机操作（5 个） | `animgraph.add_state_machine`、`animgraph.add_state`、`animgraph.remove_state`、`animgraph.rename_state`、`animgraph.add_transition`、`animgraph.remove_transition`、`animgraph.set_transition_priority` | ✅ |
+| AG.4 | 节点操作（4 个） | `animgraph.add_node`、`animgraph.set_node_property`、`animgraph.connect_nodes`、`animgraph.disconnect_node` | ✅ |
+| AG.5 | 编译 Action | `animgraph.compile`（含诊断信息） | ✅ |
+| AG.6 | Python 注册 | 18 个 ActionDef + animgraph Skill + animgraph.md 工作流文件 | ✅ |
 
 ### Phase 6: PIE / 日志断言 / Outliner ✅
 
@@ -466,3 +484,7 @@ MIT
 
 本项目基于 [lilklon/UEBlueprintMCP](https://github.com/lilklon/UEBlueprintMCP)（MIT 许可证）修改扩展。  
 原始代码版权归 [@lilklon](https://github.com/lilklon) 所有。
+
+本项目同时 fork 自 [Acmarkdry/UEEditorMCP](https://github.com/Acmarkdry/UEEditorMCP)（MIT 许可证）。  
+架构重构与功能增强部分版权归 [@Acmarkdry](https://github.com/Acmarkdry) 所有。  
+AnimGraph 完整操作扩展及后续增强版权归 acmarkdry 所有。

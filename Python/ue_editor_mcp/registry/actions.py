@@ -32,6 +32,7 @@ def register_all_actions(registry: ActionRegistry) -> None:
     registry.register_many(_MATERIAL_ACTIONS)
     registry.register_many(_WIDGET_ACTIONS)
     registry.register_many(_INPUT_ACTIONS)
+    registry.register_many(_ANIMGRAPH_ACTIONS)
 
 
 # =========================================================================
@@ -3123,5 +3124,395 @@ _INPUT_ACTIONS = [
             },
             "required": ["context_name", "action_name", "key"]
         },
+    ),
+]
+
+# =========================================================================
+# AnimGraph Actions — Animation Blueprint read / create / modify / compile
+# =========================================================================
+_ANIMGRAPH_ACTIONS = [
+    # ------------------------------------------------------------------
+    # Read-only actions
+    # ------------------------------------------------------------------
+    ActionDef(
+        id="animgraph.list_graphs",
+        command="list_animgraph_graphs",
+        tags=("animgraph", "animation", "read"),
+        capabilities=("read",),
+        risk="safe",
+        description="List all graphs in an Animation Blueprint (AnimGraph, EventGraph, StateMachines) with node counts, skeleton, and parent class.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "blueprint_name": {"type": "string", "description": "Name of the Animation Blueprint"},
+                "asset_path": {"type": "string", "description": "Optional full asset path"},
+            },
+            "required": ["blueprint_name"],
+        },
+        examples=(
+            {"blueprint_name": "ABP_Player"},
+        ),
+    ),
+    ActionDef(
+        id="animgraph.describe_topology",
+        command="describe_animgraph_topology",
+        tags=("animgraph", "animation", "read", "topology"),
+        capabilities=("read",),
+        risk="safe",
+        description="Describe the node topology of a specified AnimGraph graph (nodes, pins, edges). Supports compact mode to reduce output size.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "blueprint_name": {"type": "string", "description": "Name of the Animation Blueprint"},
+                "graph_name": {"type": "string", "description": "Name of the graph to describe"},
+                "compact": {"type": "boolean", "description": "Omit hidden pins and metadata (default: false)"},
+            },
+            "required": ["blueprint_name", "graph_name"],
+        },
+        examples=(
+            {"blueprint_name": "ABP_Player", "graph_name": "AnimGraph", "compact": True},
+        ),
+    ),
+    ActionDef(
+        id="animgraph.get_state_machine",
+        command="get_state_machine_structure",
+        tags=("animgraph", "animation", "read", "state_machine"),
+        capabilities=("read",),
+        risk="safe",
+        description="Read the complete structure of a state machine: states, transitions, entry state, and per-state subgraph node counts.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "blueprint_name": {"type": "string", "description": "Name of the Animation Blueprint"},
+                "state_machine_name": {"type": "string", "description": "Name of the state machine graph"},
+            },
+            "required": ["blueprint_name", "state_machine_name"],
+        },
+        examples=(
+            {"blueprint_name": "ABP_Player", "state_machine_name": "Locomotion"},
+        ),
+    ),
+    ActionDef(
+        id="animgraph.get_state_subgraph",
+        command="get_state_subgraph",
+        tags=("animgraph", "animation", "read", "state_machine"),
+        capabilities=("read",),
+        risk="safe",
+        description="Read the internal sub-graph topology of a state node, including AnimSequence/BlendSpace asset references.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "blueprint_name": {"type": "string", "description": "Name of the Animation Blueprint"},
+                "state_machine_name": {"type": "string", "description": "Name of the state machine"},
+                "state_name": {"type": "string", "description": "Name of the state"},
+                "compact": {"type": "boolean", "description": "Compact output (default: false)"},
+            },
+            "required": ["blueprint_name", "state_machine_name", "state_name"],
+        },
+        examples=(
+            {"blueprint_name": "ABP_Player", "state_machine_name": "Locomotion", "state_name": "Idle"},
+        ),
+    ),
+    ActionDef(
+        id="animgraph.get_transition_rule",
+        command="get_transition_rule",
+        tags=("animgraph", "animation", "read", "state_machine", "transition"),
+        capabilities=("read",),
+        risk="safe",
+        description="Read the condition expression sub-graph of a transition rule, including referenced blueprint variable names.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "blueprint_name": {"type": "string", "description": "Name of the Animation Blueprint"},
+                "state_machine_name": {"type": "string", "description": "Name of the state machine"},
+                "source_state": {"type": "string", "description": "Source state name"},
+                "target_state": {"type": "string", "description": "Target state name"},
+                "compact": {"type": "boolean", "description": "Compact output (default: false)"},
+            },
+            "required": ["blueprint_name", "state_machine_name", "source_state", "target_state"],
+        },
+        examples=(
+            {"blueprint_name": "ABP_Player", "state_machine_name": "Locomotion", "source_state": "Idle", "target_state": "Walk"},
+        ),
+    ),
+    # ------------------------------------------------------------------
+    # Write actions
+    # ------------------------------------------------------------------
+    ActionDef(
+        id="animgraph.create_blueprint",
+        command="create_anim_blueprint",
+        tags=("animgraph", "animation", "create", "asset"),
+        capabilities=("write",),
+        risk="safe",
+        description="Create a new Animation Blueprint asset with the specified skeleton.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Name of the new Animation Blueprint"},
+                "skeleton": {"type": "string", "description": "Asset path of the target skeleton (e.g. /Game/Characters/SK_Mannequin)"},
+                "parent_class": {"type": "string", "description": "Parent class (default: AnimInstance)"},
+                "path": {"type": "string", "description": "Content path (default: /Game/Blueprints)"},
+            },
+            "required": ["name", "skeleton"],
+        },
+        examples=(
+            {"name": "ABP_Player", "skeleton": "/Game/Characters/SK_Mannequin"},
+        ),
+    ),
+    ActionDef(
+        id="animgraph.add_state_machine",
+        command="add_state_machine",
+        tags=("animgraph", "animation", "write", "state_machine"),
+        capabilities=("write",),
+        risk="safe",
+        description="Add a new state machine node to the AnimGraph of an Animation Blueprint.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "blueprint_name": {"type": "string", "description": "Name of the Animation Blueprint"},
+                "state_machine_name": {"type": "string", "description": "Name for the new state machine"},
+                "node_position": {"type": "array", "items": {"type": "number"}, "description": "[X, Y] position"},
+            },
+            "required": ["blueprint_name", "state_machine_name"],
+        },
+        examples=(
+            {"blueprint_name": "ABP_Player", "state_machine_name": "Locomotion", "node_position": [200, 100]},
+        ),
+    ),
+    ActionDef(
+        id="animgraph.add_state",
+        command="add_animgraph_state",
+        tags=("animgraph", "animation", "write", "state_machine"),
+        capabilities=("write",),
+        risk="safe",
+        description="Add a new state node to a state machine in an Animation Blueprint.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "blueprint_name": {"type": "string", "description": "Name of the Animation Blueprint"},
+                "state_machine_name": {"type": "string", "description": "Name of the state machine"},
+                "state_name": {"type": "string", "description": "Name for the new state"},
+                "node_position": {"type": "array", "items": {"type": "number"}, "description": "[X, Y] position"},
+            },
+            "required": ["blueprint_name", "state_machine_name", "state_name"],
+        },
+        examples=(
+            {"blueprint_name": "ABP_Player", "state_machine_name": "Locomotion", "state_name": "Run"},
+        ),
+    ),
+    ActionDef(
+        id="animgraph.remove_state",
+        command="remove_animgraph_state",
+        tags=("animgraph", "animation", "write", "destructive", "state_machine"),
+        capabilities=("write", "destructive"),
+        risk="moderate",
+        description="Remove a state node and all its associated transitions from a state machine. Cannot remove the entry state.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "blueprint_name": {"type": "string", "description": "Name of the Animation Blueprint"},
+                "state_machine_name": {"type": "string", "description": "Name of the state machine"},
+                "state_name": {"type": "string", "description": "Name of the state to remove"},
+            },
+            "required": ["blueprint_name", "state_machine_name", "state_name"],
+        },
+        examples=(
+            {"blueprint_name": "ABP_Player", "state_machine_name": "Locomotion", "state_name": "OldState"},
+        ),
+    ),
+    ActionDef(
+        id="animgraph.add_transition",
+        command="add_transition_rule",
+        tags=("animgraph", "animation", "write", "state_machine", "transition"),
+        capabilities=("write",),
+        risk="safe",
+        description="Add a transition rule between two states in a state machine.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "blueprint_name": {"type": "string", "description": "Name of the Animation Blueprint"},
+                "state_machine_name": {"type": "string", "description": "Name of the state machine"},
+                "source_state": {"type": "string", "description": "Source state name"},
+                "target_state": {"type": "string", "description": "Target state name"},
+            },
+            "required": ["blueprint_name", "state_machine_name", "source_state", "target_state"],
+        },
+        examples=(
+            {"blueprint_name": "ABP_Player", "state_machine_name": "Locomotion", "source_state": "Idle", "target_state": "Walk"},
+        ),
+    ),
+    ActionDef(
+        id="animgraph.remove_transition",
+        command="remove_transition_rule",
+        tags=("animgraph", "animation", "write", "destructive", "state_machine", "transition"),
+        capabilities=("write", "destructive"),
+        risk="moderate",
+        description="Remove a transition rule between two states in a state machine.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "blueprint_name": {"type": "string", "description": "Name of the Animation Blueprint"},
+                "state_machine_name": {"type": "string", "description": "Name of the state machine"},
+                "source_state": {"type": "string", "description": "Source state name"},
+                "target_state": {"type": "string", "description": "Target state name"},
+            },
+            "required": ["blueprint_name", "state_machine_name", "source_state", "target_state"],
+        },
+        examples=(
+            {"blueprint_name": "ABP_Player", "state_machine_name": "Locomotion", "source_state": "Idle", "target_state": "Walk"},
+        ),
+    ),
+    ActionDef(
+        id="animgraph.add_node",
+        command="add_anim_node",
+        tags=("animgraph", "animation", "write", "node"),
+        capabilities=("write",),
+        risk="safe",
+        description="Add an animation node (AnimSequencePlayer, BlendSpacePlayer, LayeredBlendPerBone, TwoWayBlend, BlendPosesByBool, BlendPosesByInt) to a graph.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "blueprint_name": {"type": "string", "description": "Name of the Animation Blueprint"},
+                "graph_name": {"type": "string", "description": "Target graph name"},
+                "node_type": {
+                    "type": "string",
+                    "enum": ["AnimSequencePlayer", "BlendSpacePlayer", "LayeredBlendPerBone", "TwoWayBlend", "BlendPosesByBool", "BlendPosesByInt"],
+                    "description": "Type of animation node to create",
+                },
+                "anim_asset": {"type": "string", "description": "Optional asset path to bind (AnimSequence or BlendSpace)"},
+                "node_position": {"type": "array", "items": {"type": "number"}, "description": "[X, Y] position"},
+            },
+            "required": ["blueprint_name", "graph_name", "node_type"],
+        },
+        examples=(
+            {"blueprint_name": "ABP_Player", "graph_name": "AnimGraph", "node_type": "AnimSequencePlayer", "anim_asset": "/Game/Animations/Idle_Anim"},
+        ),
+    ),
+    ActionDef(
+        id="animgraph.set_node_property",
+        command="set_anim_node_property",
+        tags=("animgraph", "animation", "write", "node"),
+        capabilities=("write",),
+        risk="safe",
+        description="Set a property on an animation graph node by GUID.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "blueprint_name": {"type": "string", "description": "Name of the Animation Blueprint"},
+                "graph_name": {"type": "string", "description": "Graph containing the node"},
+                "node_guid": {"type": "string", "description": "GUID of the target node"},
+                "property_name": {"type": "string", "description": "Property name to set"},
+                "property_value": {"description": "Value to set (string, number, bool, or asset path)"},
+            },
+            "required": ["blueprint_name", "graph_name", "node_guid", "property_name", "property_value"],
+        },
+        examples=(
+            {"blueprint_name": "ABP_Player", "graph_name": "AnimGraph", "node_guid": "...", "property_name": "Sequence", "property_value": "/Game/Animations/Run_Anim"},
+        ),
+    ),
+    ActionDef(
+        id="animgraph.connect_nodes",
+        command="connect_anim_nodes",
+        tags=("animgraph", "animation", "write", "node", "connection"),
+        capabilities=("write",),
+        risk="safe",
+        description="Connect two AnimGraph node pins by GUID.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "blueprint_name": {"type": "string", "description": "Name of the Animation Blueprint"},
+                "graph_name": {"type": "string", "description": "Graph containing the nodes"},
+                "source_node_id": {"type": "string", "description": "GUID of the source node"},
+                "source_pin": {"type": "string", "description": "Source pin name"},
+                "target_node_id": {"type": "string", "description": "GUID of the target node"},
+                "target_pin": {"type": "string", "description": "Target pin name"},
+            },
+            "required": ["blueprint_name", "graph_name", "source_node_id", "source_pin", "target_node_id", "target_pin"],
+        },
+        examples=(
+            {"blueprint_name": "ABP_Player", "graph_name": "AnimGraph", "source_node_id": "...", "source_pin": "Pose", "target_node_id": "...", "target_pin": "Pose"},
+        ),
+    ),
+    ActionDef(
+        id="animgraph.disconnect_node",
+        command="disconnect_anim_node",
+        tags=("animgraph", "animation", "write", "node", "connection"),
+        capabilities=("write",),
+        risk="safe",
+        description="Disconnect all connections on a specified AnimGraph node pin.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "blueprint_name": {"type": "string", "description": "Name of the Animation Blueprint"},
+                "graph_name": {"type": "string", "description": "Graph containing the node"},
+                "node_guid": {"type": "string", "description": "GUID of the node"},
+                "pin_name": {"type": "string", "description": "Pin name to disconnect"},
+            },
+            "required": ["blueprint_name", "graph_name", "node_guid", "pin_name"],
+        },
+        examples=(
+            {"blueprint_name": "ABP_Player", "graph_name": "AnimGraph", "node_guid": "...", "pin_name": "Pose"},
+        ),
+    ),
+    ActionDef(
+        id="animgraph.rename_state",
+        command="rename_animgraph_state",
+        tags=("animgraph", "animation", "write", "state_machine"),
+        capabilities=("write",),
+        risk="safe",
+        description="Rename a state node in a state machine.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "blueprint_name": {"type": "string", "description": "Name of the Animation Blueprint"},
+                "state_machine_name": {"type": "string", "description": "Name of the state machine"},
+                "old_name": {"type": "string", "description": "Current state name"},
+                "new_name": {"type": "string", "description": "New state name"},
+            },
+            "required": ["blueprint_name", "state_machine_name", "old_name", "new_name"],
+        },
+        examples=(
+            {"blueprint_name": "ABP_Player", "state_machine_name": "Locomotion", "old_name": "Walk", "new_name": "Walking"},
+        ),
+    ),
+    ActionDef(
+        id="animgraph.set_transition_priority",
+        command="set_transition_priority",
+        tags=("animgraph", "animation", "write", "state_machine", "transition"),
+        capabilities=("write",),
+        risk="safe",
+        description="Modify the priority order of a transition rule in a state machine.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "blueprint_name": {"type": "string", "description": "Name of the Animation Blueprint"},
+                "state_machine_name": {"type": "string", "description": "Name of the state machine"},
+                "source_state": {"type": "string", "description": "Source state name"},
+                "target_state": {"type": "string", "description": "Target state name"},
+                "priority": {"type": "integer", "description": "New priority order (lower = higher priority)"},
+            },
+            "required": ["blueprint_name", "state_machine_name", "source_state", "target_state", "priority"],
+        },
+        examples=(
+            {"blueprint_name": "ABP_Player", "state_machine_name": "Locomotion", "source_state": "Idle", "target_state": "Walk", "priority": 2},
+        ),
+    ),
+    ActionDef(
+        id="animgraph.compile",
+        command="compile_anim_blueprint",
+        tags=("animgraph", "animation", "write", "compile"),
+        capabilities=("write",),
+        risk="safe",
+        description="Compile an Animation Blueprint and return diagnostic information (status, error count, warning count, error list).",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "blueprint_name": {"type": "string", "description": "Name of the Animation Blueprint to compile"},
+            },
+            "required": ["blueprint_name"],
+        },
+        examples=(
+            {"blueprint_name": "ABP_Player"},
+        ),
     ),
 ]

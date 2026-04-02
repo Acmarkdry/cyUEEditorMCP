@@ -12,6 +12,7 @@
 #include "Actions/MaterialActions.h"
 #include "Actions/LayoutActions.h"
 #include "Actions/EditorDiffActions.h"
+#include "Actions/AnimGraphActions.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "Kismet/GameplayStatics.h"
@@ -342,6 +343,28 @@ void UMCPBridge::RegisterActions()
 	// P7: Asset Editor Actions
 	// =========================================================================
 	ActionHandlers.Add(TEXT("open_asset_editor"), MakeShared<FOpenAssetEditorAction>());
+
+	// =========================================================================
+	// AnimGraph Actions (Animation Blueprint read/create/modify/compile)
+	// =========================================================================
+	ActionHandlers.Add(TEXT("list_animgraph_graphs"),        MakeShared<FListAnimGraphGraphsAction>());
+	ActionHandlers.Add(TEXT("describe_animgraph_topology"),  MakeShared<FDescribeAnimGraphTopologyAction>());
+	ActionHandlers.Add(TEXT("get_state_machine_structure"),  MakeShared<FGetStateMachineStructureAction>());
+	ActionHandlers.Add(TEXT("get_state_subgraph"),           MakeShared<FGetStateSubgraphAction>());
+	ActionHandlers.Add(TEXT("get_transition_rule"),          MakeShared<FGetTransitionRuleAction>());
+	ActionHandlers.Add(TEXT("create_anim_blueprint"),        MakeShared<FCreateAnimBlueprintAction>());
+	ActionHandlers.Add(TEXT("add_state_machine"),            MakeShared<FAddStateMachineAction>());
+	ActionHandlers.Add(TEXT("add_animgraph_state"),          MakeShared<FAddStateAction>());
+	ActionHandlers.Add(TEXT("remove_animgraph_state"),       MakeShared<FRemoveStateAction>());
+	ActionHandlers.Add(TEXT("add_transition_rule"),          MakeShared<FAddTransitionRuleAction>());
+	ActionHandlers.Add(TEXT("remove_transition_rule"),       MakeShared<FRemoveTransitionRuleAction>());
+	ActionHandlers.Add(TEXT("add_anim_node"),                MakeShared<FAddAnimNodeAction>());
+	ActionHandlers.Add(TEXT("set_anim_node_property"),       MakeShared<FSetAnimNodePropertyAction>());
+	ActionHandlers.Add(TEXT("connect_anim_nodes"),           MakeShared<FConnectAnimNodesAction>());
+	ActionHandlers.Add(TEXT("disconnect_anim_node"),         MakeShared<FDisconnectAnimNodeAction>());
+	ActionHandlers.Add(TEXT("rename_animgraph_state"),       MakeShared<FRenameStateAction>());
+	ActionHandlers.Add(TEXT("set_transition_priority"),      MakeShared<FSetTransitionPriorityAction>());
+	ActionHandlers.Add(TEXT("compile_anim_blueprint"),       MakeShared<FCompileAnimBlueprintAction>());
 
 	UE_LOG(LogMCP, Log, TEXT("UEEditorMCP: Registered %d action handlers"), ActionHandlers.Num());
 }

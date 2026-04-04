@@ -1,4 +1,4 @@
-// Copyright (c) 2025 zolnoor. All rights reserved.
+﻿// Copyright (c) 2025 zolnoor. All rights reserved.
 
 #include "Actions/MaterialActions.h"
 #include "MCPContext.h"
@@ -846,7 +846,7 @@ bool FConnectMaterialExpressionsAction::Validate(const TSharedPtr<FJsonObject>& 
 bool FConnectMaterialExpressionsAction::ConnectToExpressionInput(UMaterialExpression* SourceExpr, int32 OutputIndex,
 	UMaterialExpression* TargetExpr, const FString& InputName, FString& OutError) const
 {
-	// P4.2: Generic connection via GetInputsView() — works for ANY expression type
+	// P4.2: Generic connection via GetInputsView() 鈥?works for ANY expression type
 	// Special-case Custom expressions first (dynamic inputs)
 	if (UMaterialExpressionCustom* Custom = Cast<UMaterialExpressionCustom>(TargetExpr))
 	{
@@ -2864,7 +2864,7 @@ TSharedPtr<FJsonObject> FAutoCommentMaterialAction::ExecuteInternal(const TShare
 		// IMPORTANT: Engine modules (UnrealEd, MaterialEditor) are compiled WITHOUT RTTI (/GR-),
 		// while this plugin has bUseRTTI=true. Using dynamic_cast on engine types across DLL
 		// boundaries is undefined behavior and will crash. We must use only:
-		//   - FMaterialEditorUtilities::GetIMaterialEditorForObject → TSharedPtr<IMaterialEditor>
+		//   - FMaterialEditorUtilities::GetIMaterialEditorForObject 鈫?TSharedPtr<IMaterialEditor>
 		//     (uses StaticCastSharedPtr internally, no RTTI needed)
 		//   - UAssetEditorSubsystem for discovering edited assets (UObject Cast<> for UObjects)
 		//   - IMaterialEditor inherits FAssetEditorToolkit, so GetObjectsCurrentlyBeingEdited()
@@ -2873,7 +2873,7 @@ TSharedPtr<FJsonObject> FAutoCommentMaterialAction::ExecuteInternal(const TShare
 		TSharedPtr<IMaterialEditor> MatEditorPtr;
 		UMaterial* PreviewMaterial = nullptr;
 
-		// Method 1: Try original material's graph → FMaterialEditorUtilities
+		// Method 1: Try original material's graph 鈫?FMaterialEditorUtilities
 		if (Material->MaterialGraph)
 		{
 			MatEditorPtr = FMaterialEditorUtilities::GetIMaterialEditorForObject(Material->MaterialGraph);
@@ -2893,7 +2893,7 @@ TSharedPtr<FJsonObject> FAutoCommentMaterialAction::ExecuteInternal(const TShare
 				UMaterial* Mat = Cast<UMaterial>(Asset);
 				if (Mat && Mat != Material && Mat->MaterialGraph && Mat->GetOutermost() == GetTransientPackage())
 				{
-					// Candidate preview material — verify it's paired with our material
+					// Candidate preview material 鈥?verify it's paired with our material
 					TSharedPtr<IMaterialEditor> TestEditor = FMaterialEditorUtilities::GetIMaterialEditorForObject(Mat->MaterialGraph);
 					if (TestEditor.IsValid())
 					{
@@ -3156,9 +3156,9 @@ TSharedPtr<FJsonObject> FAutoCommentMaterialAction::ExecuteInternal(const TShare
 
 	// Try to get material editor for accurate node bounds
 	// The SGraphEditor displays the PreviewMaterial's MaterialGraph, not the original.
-	// We must map original expressions → preview expressions by index to get Slate bounds.
+	// We must map original expressions 鈫?preview expressions by index to get Slate bounds.
 	//
-	// NOTE: No dynamic_cast — engine modules compiled without RTTI (/GR-).
+	// NOTE: No dynamic_cast 鈥?engine modules compiled without RTTI (/GR-).
 	// Use FMaterialEditorUtilities::GetIMaterialEditorForObject (returns TSharedPtr via StaticCastSharedPtr).
 	// IMaterialEditor inherits FAssetEditorToolkit, so GetObjectsCurrentlyBeingEdited() is accessible directly.
 	TSharedPtr<IMaterialEditor> BoundsMatEditorPtr;
@@ -3253,7 +3253,7 @@ TSharedPtr<FJsonObject> FAutoCommentMaterialAction::ExecuteInternal(const TShare
 		if (BoundsMatEditorRaw)
 		{
 			// Expr is from the original material; the editor displays the PreviewMaterial's graph.
-			// We must map original expression → preview expression by index to find the correct
+			// We must map original expression 鈫?preview expression by index to find the correct
 			// graph node that has an active Slate widget in the SGraphEditor.
 			UEdGraphNode* BoundsNode = nullptr;
 			if (BoundsGraph)
@@ -3366,7 +3366,7 @@ TSharedPtr<FJsonObject> FAutoCommentMaterialAction::ExecuteInternal(const TShare
 			ColorArray->Num() > 3 ? (*ColorArray)[3]->AsNumber() : 1.0f);
 	}
 
-	// Add to material's EditorComments (NOT Expressions — Comments have a separate collection)
+	// Add to material's EditorComments (NOT Expressions 鈥?Comments have a separate collection)
 	Material->GetExpressionCollection().AddComment(Comment);
 
 	// Add graph node if material graph is available (ensures comment appears in the editor)
@@ -3408,7 +3408,7 @@ TSharedPtr<FJsonObject> FAutoCommentMaterialAction::ExecuteInternal(const TShare
 
 bool FGetMaterialSelectedNodesAction::Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError)
 {
-	// No required params — material is auto-detected if not specified
+	// No required params 鈥?material is auto-detected if not specified
 	return true;
 }
 
@@ -3831,7 +3831,7 @@ TSharedPtr<FJsonObject> FRefreshMaterialEditorAction::ExecuteInternal(const TSha
 	TSharedPtr<IMaterialEditor> MatEditorPtr;
 	UMaterial* PreviewMaterial = nullptr;
 
-	// Method 1: Try original material's graph → FMaterialEditorUtilities
+	// Method 1: Try original material's graph 鈫?FMaterialEditorUtilities
 	if (Material->MaterialGraph)
 	{
 		MatEditorPtr = FMaterialEditorUtilities::GetIMaterialEditorForObject(Material->MaterialGraph);
@@ -3851,7 +3851,7 @@ TSharedPtr<FJsonObject> FRefreshMaterialEditorAction::ExecuteInternal(const TSha
 			UMaterial* Mat = Cast<UMaterial>(Asset);
 			if (Mat && Mat != Material && Mat->MaterialGraph && Mat->GetOutermost() == GetTransientPackage())
 			{
-				// Candidate preview material — verify it's paired with our material
+				// Candidate preview material 鈥?verify it's paired with our material
 				TSharedPtr<IMaterialEditor> TestEditor = FMaterialEditorUtilities::GetIMaterialEditorForObject(Mat->MaterialGraph);
 				if (TestEditor.IsValid())
 				{
@@ -3931,6 +3931,1300 @@ TSharedPtr<FJsonObject> FRefreshMaterialEditorAction::ExecuteInternal(const TSha
 	Result->SetBoolField(TEXT("editor_found"), bEditorFound);
 	Result->SetBoolField(TEXT("graph_rebuilt"), bGraphRebuilt);
 	Result->SetBoolField(TEXT("previews_refreshed"), bPreviewsRefreshed);
+
+	return CreateSuccessResponse(Result);
+}
+
+// =========================================================================
+// FAnalyzeMaterialComplexityAction
+// =========================================================================
+
+bool FAnalyzeMaterialComplexityAction::Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError)
+{
+	FString MaterialName;
+	return GetRequiredString(Params, TEXT("material_name"), MaterialName, OutError);
+}
+
+TSharedPtr<FJsonObject> FAnalyzeMaterialComplexityAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	FString Error;
+	FString MaterialName;
+	GetRequiredString(Params, TEXT("material_name"), MaterialName, Error);
+
+	UMaterial* Material = FindMaterial(MaterialName, Error);
+	if (!Material)
+	{
+		return CreateErrorResponse(Error, TEXT("material_not_found"));
+	}
+
+	const TArray<TObjectPtr<UMaterialExpression>>& Expressions = Material->GetExpressionCollection().Expressions;
+
+	// --- Node count and type distribution ---
+	int32 NodeCount = 0;
+	TMap<FString, int32> TypeDistribution;
+
+	for (UMaterialExpression* Expr : Expressions)
+	{
+		if (!Expr || Expr->IsA<UMaterialExpressionComment>())
+		{
+			continue;
+		}
+		++NodeCount;
+		FString ClassName = Expr->GetClass()->GetName();
+		// Strip "MaterialExpression" prefix for readability
+		ClassName.RemoveFromStart(TEXT("MaterialExpression"));
+		int32& Count = TypeDistribution.FindOrAdd(ClassName);
+		++Count;
+	}
+
+	// --- Connection count ---
+	int32 ConnectionCount = 0;
+	for (UMaterialExpression* Expr : Expressions)
+	{
+		if (!Expr || Expr->IsA<UMaterialExpressionComment>())
+		{
+			continue;
+		}
+		for (int32 InputIdx = 0; ; ++InputIdx)
+		{
+			FExpressionInput* Input = Expr->GetInput(InputIdx);
+			if (!Input)
+			{
+				break;
+			}
+			if (Input->Expression != nullptr)
+			{
+				++ConnectionCount;
+			}
+		}
+	}
+	// Also count connections from material output pins
+	UMaterialEditorOnlyData* EditorData = Material->GetEditorOnlyData();
+	if (EditorData)
+	{
+		auto CountOutput = [&](const FExpressionInput& Input)
+		{
+			if (Input.Expression != nullptr)
+			{
+				++ConnectionCount;
+			}
+		};
+		CountOutput(EditorData->BaseColor);
+		CountOutput(EditorData->EmissiveColor);
+		CountOutput(EditorData->Metallic);
+		CountOutput(EditorData->Roughness);
+		CountOutput(EditorData->Specular);
+		CountOutput(EditorData->Normal);
+		CountOutput(EditorData->Opacity);
+		CountOutput(EditorData->OpacityMask);
+		CountOutput(EditorData->AmbientOcclusion);
+		CountOutput(EditorData->WorldPositionOffset);
+		CountOutput(EditorData->Refraction);
+	}
+
+	// --- Shader instruction counts ---
+	int32 VSInstructions = 0;
+	int32 PSInstructions = 0;
+	bool bCompiled = false;
+
+	const FMaterialResource* MatResource = Material->GetMaterialResource(GMaxRHIFeatureLevel);
+	if (MatResource)
+	{
+		int32 NumPS = MatResource->GetNumPixelShaderInstructions();
+		int32 NumVS = MatResource->GetNumVertexShaderInstructions();
+		if (NumPS > 0 || NumVS > 0)
+		{
+			bCompiled = true;
+			PSInstructions = NumPS;
+			VSInstructions = NumVS;
+		}
+	}
+
+	// --- Parameters ---
+	TArray<TSharedPtr<FJsonValue>> ParametersArray;
+	for (UMaterialExpression* Expr : Expressions)
+	{
+		if (!Expr)
+		{
+			continue;
+		}
+
+		TSharedPtr<FJsonObject> ParamObj;
+
+		if (UMaterialExpressionScalarParameter* ScalarParam = Cast<UMaterialExpressionScalarParameter>(Expr))
+		{
+			ParamObj = MakeShared<FJsonObject>();
+			ParamObj->SetStringField(TEXT("name"), ScalarParam->ParameterName.ToString());
+			ParamObj->SetStringField(TEXT("type"), TEXT("ScalarParameter"));
+			ParamObj->SetNumberField(TEXT("default_value"), ScalarParam->DefaultValue);
+		}
+		else if (UMaterialExpressionVectorParameter* VectorParam = Cast<UMaterialExpressionVectorParameter>(Expr))
+		{
+			ParamObj = MakeShared<FJsonObject>();
+			ParamObj->SetStringField(TEXT("name"), VectorParam->ParameterName.ToString());
+			ParamObj->SetStringField(TEXT("type"), TEXT("VectorParameter"));
+			TArray<TSharedPtr<FJsonValue>> DefaultArr;
+			DefaultArr.Add(MakeShared<FJsonValueNumber>(VectorParam->DefaultValue.R));
+			DefaultArr.Add(MakeShared<FJsonValueNumber>(VectorParam->DefaultValue.G));
+			DefaultArr.Add(MakeShared<FJsonValueNumber>(VectorParam->DefaultValue.B));
+			DefaultArr.Add(MakeShared<FJsonValueNumber>(VectorParam->DefaultValue.A));
+			ParamObj->SetArrayField(TEXT("default_value"), DefaultArr);
+		}
+		else if (UMaterialExpressionTextureSampleParameter2D* TexParam = Cast<UMaterialExpressionTextureSampleParameter2D>(Expr))
+		{
+			ParamObj = MakeShared<FJsonObject>();
+			ParamObj->SetStringField(TEXT("name"), TexParam->ParameterName.ToString());
+			ParamObj->SetStringField(TEXT("type"), TEXT("TextureSampleParameter2D"));
+			FString TexPath = TexParam->Texture ? TexParam->Texture->GetPathName() : TEXT("");
+			ParamObj->SetStringField(TEXT("default_value"), TexPath);
+		}
+		else if (UMaterialExpressionStaticSwitchParameter* SwitchParam = Cast<UMaterialExpressionStaticSwitchParameter>(Expr))
+		{
+			ParamObj = MakeShared<FJsonObject>();
+			ParamObj->SetStringField(TEXT("name"), SwitchParam->ParameterName.ToString());
+			ParamObj->SetStringField(TEXT("type"), TEXT("StaticSwitchParameter"));
+			ParamObj->SetBoolField(TEXT("default_value"), SwitchParam->DefaultValue);
+		}
+
+		if (ParamObj.IsValid())
+		{
+			ParametersArray.Add(MakeShared<FJsonValueObject>(ParamObj));
+		}
+	}
+
+	// --- Texture samples ---
+	TArray<TSharedPtr<FJsonValue>> TextureSamplesArray;
+	for (UMaterialExpression* Expr : Expressions)
+	{
+		if (!Expr)
+		{
+			continue;
+		}
+
+		// TextureSampleParameter2D is a subclass of TextureSample, check it first
+		if (UMaterialExpressionTextureSampleParameter2D* TexParam = Cast<UMaterialExpressionTextureSampleParameter2D>(Expr))
+		{
+			TSharedPtr<FJsonObject> SampleObj = MakeShared<FJsonObject>();
+			SampleObj->SetStringField(TEXT("node_name"), TexParam->ParameterName.ToString());
+			SampleObj->SetStringField(TEXT("type"), TEXT("TextureSampleParameter2D"));
+			SampleObj->SetStringField(TEXT("texture_path"), TexParam->Texture ? TexParam->Texture->GetPathName() : TEXT(""));
+			TextureSamplesArray.Add(MakeShared<FJsonValueObject>(SampleObj));
+		}
+		else if (UMaterialExpressionTextureSample* TexSample = Cast<UMaterialExpressionTextureSample>(Expr))
+		{
+			TSharedPtr<FJsonObject> SampleObj = MakeShared<FJsonObject>();
+			// Use Desc if set, otherwise fall back to UObject name
+			FString NodeName = !Expr->Desc.IsEmpty() ? Expr->Desc : Expr->GetName();
+			SampleObj->SetStringField(TEXT("node_name"), NodeName);
+			SampleObj->SetStringField(TEXT("type"), TEXT("TextureSample"));
+			SampleObj->SetStringField(TEXT("texture_path"), TexSample->Texture ? TexSample->Texture->GetPathName() : TEXT(""));
+			TextureSamplesArray.Add(MakeShared<FJsonValueObject>(SampleObj));
+		}
+	}
+
+	// --- Build response ---
+	TSharedPtr<FJsonObject> NodeTypeDist = MakeShared<FJsonObject>();
+	for (const auto& Pair : TypeDistribution)
+	{
+		NodeTypeDist->SetNumberField(Pair.Key, Pair.Value);
+	}
+
+	TSharedPtr<FJsonObject> ShaderInstructions = MakeShared<FJsonObject>();
+	ShaderInstructions->SetNumberField(TEXT("vs"), VSInstructions);
+	ShaderInstructions->SetNumberField(TEXT("ps"), PSInstructions);
+	ShaderInstructions->SetBoolField(TEXT("compiled"), bCompiled);
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("material_name"), MaterialName);
+	Result->SetNumberField(TEXT("node_count"), NodeCount);
+	Result->SetObjectField(TEXT("node_type_distribution"), NodeTypeDist);
+	Result->SetNumberField(TEXT("connection_count"), ConnectionCount);
+	Result->SetObjectField(TEXT("shader_instructions"), ShaderInstructions);
+	Result->SetArrayField(TEXT("parameters"), ParametersArray);
+	Result->SetArrayField(TEXT("texture_samples"), TextureSamplesArray);
+
+	return CreateSuccessResponse(Result);
+}
+
+// =========================================================================
+// FAnalyzeMaterialDependenciesAction
+// =========================================================================
+
+bool FAnalyzeMaterialDependenciesAction::Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError)
+{
+	FString MaterialName;
+	return GetRequiredString(Params, TEXT("material_name"), MaterialName, OutError);
+}
+
+TSharedPtr<FJsonObject> FAnalyzeMaterialDependenciesAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	FString Error;
+	FString MaterialName;
+	GetRequiredString(Params, TEXT("material_name"), MaterialName, Error);
+
+	UMaterial* Material = FindMaterial(MaterialName, Error);
+	if (!Material)
+	{
+		return CreateErrorResponse(Error, TEXT("material_not_found"));
+	}
+
+	const TArray<TObjectPtr<UMaterialExpression>>& Expressions = Material->GetExpressionCollection().Expressions;
+
+	// --- External assets ---
+	TArray<TSharedPtr<FJsonValue>> ExternalAssetsArray;
+	TSet<FString> AddedPaths;
+
+	for (UMaterialExpression* Expr : Expressions)
+	{
+		if (!Expr)
+		{
+			continue;
+		}
+
+		if (UMaterialExpressionTextureSample* TexSample = Cast<UMaterialExpressionTextureSample>(Expr))
+		{
+			if (TexSample->Texture != nullptr)
+			{
+				FString Path = TexSample->Texture->GetPathName();
+				if (!AddedPaths.Contains(Path))
+				{
+					AddedPaths.Add(Path);
+					FString NodeName = !Expr->Desc.IsEmpty() ? Expr->Desc : Expr->GetName();
+					TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
+					AssetObj->SetStringField(TEXT("type"), TEXT("Texture"));
+					AssetObj->SetStringField(TEXT("path"), Path);
+					AssetObj->SetStringField(TEXT("node_name"), NodeName);
+					ExternalAssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
+				}
+			}
+		}
+		else if (UMaterialExpressionMaterialFunctionCall* FuncCall = Cast<UMaterialExpressionMaterialFunctionCall>(Expr))
+		{
+			if (FuncCall->MaterialFunction != nullptr)
+			{
+				FString Path = FuncCall->MaterialFunction->GetPathName();
+				if (!AddedPaths.Contains(Path))
+				{
+					AddedPaths.Add(Path);
+					FString NodeName = !Expr->Desc.IsEmpty() ? Expr->Desc : Expr->GetName();
+					TSharedPtr<FJsonObject> AssetObj = MakeShared<FJsonObject>();
+					AssetObj->SetStringField(TEXT("type"), TEXT("MaterialFunction"));
+					AssetObj->SetStringField(TEXT("path"), Path);
+					AssetObj->SetStringField(TEXT("node_name"), NodeName);
+					ExternalAssetsArray.Add(MakeShared<FJsonValueObject>(AssetObj));
+				}
+			}
+		}
+	}
+
+	// --- Level references ---
+	TArray<TSharedPtr<FJsonValue>> LevelReferencesArray;
+
+	UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+	if (World)
+	{
+		for (TActorIterator<AActor> ActorIt(World); ActorIt; ++ActorIt)
+		{
+			AActor* Actor = *ActorIt;
+			if (!Actor)
+			{
+				continue;
+			}
+
+			TArray<UPrimitiveComponent*> PrimComponents;
+			Actor->GetComponents<UPrimitiveComponent>(PrimComponents);
+
+			for (UPrimitiveComponent* Comp : PrimComponents)
+			{
+				if (!Comp)
+				{
+					continue;
+				}
+
+				int32 NumMaterials = Comp->GetNumMaterials();
+				for (int32 SlotIdx = 0; SlotIdx < NumMaterials; ++SlotIdx)
+				{
+					UMaterialInterface* MatInterface = Comp->GetMaterial(SlotIdx);
+					if (!MatInterface)
+					{
+						continue;
+					}
+
+					bool bMatches = false;
+					if (MatInterface == Material)
+					{
+						bMatches = true;
+					}
+					else if (UMaterialInstance* MatInst = Cast<UMaterialInstance>(MatInterface))
+					{
+						if (MatInst->GetBaseMaterial() == Material)
+						{
+							bMatches = true;
+						}
+					}
+
+					if (bMatches)
+					{
+						TSharedPtr<FJsonObject> RefObj = MakeShared<FJsonObject>();
+						RefObj->SetStringField(TEXT("actor_name"), Actor->GetActorLabel());
+						RefObj->SetStringField(TEXT("component_name"), Comp->GetName());
+						LevelReferencesArray.Add(MakeShared<FJsonValueObject>(RefObj));
+						break; // One entry per component is enough
+					}
+				}
+			}
+		}
+	}
+
+	// --- Build response ---
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("material_name"), MaterialName);
+	Result->SetArrayField(TEXT("external_assets"), ExternalAssetsArray);
+	Result->SetArrayField(TEXT("level_references"), LevelReferencesArray);
+	Result->SetNumberField(TEXT("level_reference_count"), LevelReferencesArray.Num());
+
+	return CreateSuccessResponse(Result);
+}
+
+// =========================================================================
+// FDiagnoseMaterialAction
+// =========================================================================
+
+bool FDiagnoseMaterialAction::Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError)
+{
+	FString MaterialName;
+	return GetRequiredString(Params, TEXT("material_name"), MaterialName, OutError);
+}
+
+TSharedPtr<FJsonObject> FDiagnoseMaterialAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	FString Error;
+	FString MaterialName;
+	GetRequiredString(Params, TEXT("material_name"), MaterialName, Error);
+
+	UMaterial* Material = FindMaterial(MaterialName, Error);
+	if (!Material)
+	{
+		return CreateErrorResponse(Error, TEXT("material_not_found"));
+	}
+
+	const TArray<TObjectPtr<UMaterialExpression>>& Expressions = Material->GetExpressionCollection().Expressions;
+	TArray<TSharedPtr<FJsonValue>> DiagnosticsArray;
+
+	// --- Rule 1: Domain/BlendMode incompatibility ---
+	if (Material->MaterialDomain == MD_PostProcess && Material->BlendMode != BLEND_Opaque)
+	{
+		TSharedPtr<FJsonObject> DiagObj = MakeShared<FJsonObject>();
+		DiagObj->SetStringField(TEXT("severity"), TEXT("error"));
+		DiagObj->SetStringField(TEXT("code"), TEXT("domain_blend_incompatible"));
+		DiagObj->SetStringField(TEXT("message"), TEXT("PostProcess material must use Opaque blend mode"));
+		DiagnosticsArray.Add(MakeShared<FJsonValueObject>(DiagObj));
+	}
+
+	// --- Rule 2: Texture sample count > 16 ---
+	int32 TextureSampleCount = 0;
+	for (UMaterialExpression* Expr : Expressions)
+	{
+		if (Expr && Expr->IsA<UMaterialExpressionTextureSample>())
+		{
+			++TextureSampleCount;
+		}
+	}
+	if (TextureSampleCount > 16)
+	{
+		TSharedPtr<FJsonObject> DiagObj = MakeShared<FJsonObject>();
+		DiagObj->SetStringField(TEXT("severity"), TEXT("warning"));
+		DiagObj->SetStringField(TEXT("code"), TEXT("texture_sample_limit"));
+		DiagObj->SetStringField(TEXT("message"),
+			FString::Printf(TEXT("Material has %d texture samples (limit: 16)"), TextureSampleCount));
+		DiagnosticsArray.Add(MakeShared<FJsonValueObject>(DiagObj));
+	}
+
+	// --- Rule 3: Orphan nodes ---
+	// Build set of all expressions referenced by other expressions or material output pins
+	TSet<UMaterialExpression*> ReferencedExprs;
+
+	// Scan all expression inputs
+	for (UMaterialExpression* Expr : Expressions)
+	{
+		if (!Expr || Expr->IsA<UMaterialExpressionComment>())
+		{
+			continue;
+		}
+		for (int32 InputIdx = 0; ; ++InputIdx)
+		{
+			FExpressionInput* Input = Expr->GetInput(InputIdx);
+			if (!Input)
+			{
+				break;
+			}
+			if (Input->Expression != nullptr)
+			{
+				ReferencedExprs.Add(Input->Expression);
+			}
+		}
+	}
+
+	// Scan material output pins
+	UMaterialEditorOnlyData* EditorData = Material->GetEditorOnlyData();
+	if (EditorData)
+	{
+		auto MarkReferenced = [&](const FExpressionInput& Input)
+		{
+			if (Input.Expression != nullptr)
+			{
+				ReferencedExprs.Add(Input.Expression);
+			}
+		};
+		MarkReferenced(EditorData->BaseColor);
+		MarkReferenced(EditorData->EmissiveColor);
+		MarkReferenced(EditorData->Metallic);
+		MarkReferenced(EditorData->Roughness);
+		MarkReferenced(EditorData->Specular);
+		MarkReferenced(EditorData->Normal);
+		MarkReferenced(EditorData->Opacity);
+		MarkReferenced(EditorData->OpacityMask);
+		MarkReferenced(EditorData->AmbientOcclusion);
+		MarkReferenced(EditorData->WorldPositionOffset);
+		MarkReferenced(EditorData->Refraction);
+	}
+
+	// Any non-comment expression not in the referenced set is an orphan
+	for (UMaterialExpression* Expr : Expressions)
+	{
+		if (!Expr || Expr->IsA<UMaterialExpressionComment>())
+		{
+			continue;
+		}
+		if (!ReferencedExprs.Contains(Expr))
+		{
+			FString NodeName = !Expr->Desc.IsEmpty() ? Expr->Desc : Expr->GetName();
+			TSharedPtr<FJsonObject> DiagObj = MakeShared<FJsonObject>();
+			DiagObj->SetStringField(TEXT("severity"), TEXT("warning"));
+			DiagObj->SetStringField(TEXT("code"), TEXT("orphan_node"));
+			DiagObj->SetStringField(TEXT("message"),
+				FString::Printf(TEXT("Node '%s' is not connected to any output"), *NodeName));
+			DiagObj->SetStringField(TEXT("node_name"), NodeName);
+			DiagnosticsArray.Add(MakeShared<FJsonValueObject>(DiagObj));
+		}
+	}
+
+	// --- Rule 4: Custom HLSL nodes ---
+	for (UMaterialExpression* Expr : Expressions)
+	{
+		if (!Expr)
+		{
+			continue;
+		}
+		if (UMaterialExpressionCustom* CustomExpr = Cast<UMaterialExpressionCustom>(Expr))
+		{
+			FString NodeName = !Expr->Desc.IsEmpty() ? Expr->Desc : Expr->GetName();
+			TSharedPtr<FJsonObject> DiagObj = MakeShared<FJsonObject>();
+			DiagObj->SetStringField(TEXT("severity"), TEXT("info"));
+			DiagObj->SetStringField(TEXT("code"), TEXT("custom_hlsl"));
+			DiagObj->SetStringField(TEXT("message"),
+				FString::Printf(TEXT("Custom HLSL node '%s' disables some shader optimizations"), *NodeName));
+			DiagObj->SetStringField(TEXT("node_name"), NodeName);
+			DiagnosticsArray.Add(MakeShared<FJsonValueObject>(DiagObj));
+		}
+	}
+
+	// --- Build response ---
+	FString Status = DiagnosticsArray.Num() == 0 ? TEXT("healthy") : TEXT("has_issues");
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("material_name"), MaterialName);
+	Result->SetStringField(TEXT("status"), Status);
+	Result->SetArrayField(TEXT("diagnostics"), DiagnosticsArray);
+
+	return CreateSuccessResponse(Result);
+}
+
+// =========================================================================
+// FDiffMaterialsAction
+// =========================================================================
+
+bool FDiffMaterialsAction::Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError)
+{
+	FString NameA, NameB;
+	if (!GetRequiredString(Params, TEXT("material_name_a"), NameA, OutError)) return false;
+	if (!GetRequiredString(Params, TEXT("material_name_b"), NameB, OutError)) return false;
+	return true;
+}
+
+TSharedPtr<FJsonObject> FDiffMaterialsAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	FString Error;
+	FString MaterialNameA, MaterialNameB;
+	GetRequiredString(Params, TEXT("material_name_a"), MaterialNameA, Error);
+	GetRequiredString(Params, TEXT("material_name_b"), MaterialNameB, Error);
+
+	UMaterial* MaterialA = FindMaterial(MaterialNameA, Error);
+	if (!MaterialA)
+	{
+		return CreateErrorResponse(
+			FString::Printf(TEXT("Material '%s' not found"), *MaterialNameA),
+			TEXT("material_not_found"));
+	}
+
+	UMaterial* MaterialB = FindMaterial(MaterialNameB, Error);
+	if (!MaterialB)
+	{
+		return CreateErrorResponse(
+			FString::Printf(TEXT("Material '%s' not found"), *MaterialNameB),
+			TEXT("material_not_found"));
+	}
+
+	// Helper lambda: compute node_count, connection_count, and parameter name set for a material
+	auto ComputeStats = [](UMaterial* Mat, int32& OutNodeCount, int32& OutConnectionCount, TSet<FString>& OutParamNames)
+	{
+		OutNodeCount = 0;
+		OutConnectionCount = 0;
+
+		const TArray<TObjectPtr<UMaterialExpression>>& Exprs = Mat->GetExpressionCollection().Expressions;
+
+		for (UMaterialExpression* Expr : Exprs)
+		{
+			if (!Expr || Expr->IsA<UMaterialExpressionComment>())
+			{
+				continue;
+			}
+			++OutNodeCount;
+
+			// Count connections from this expression's inputs
+			for (int32 InputIdx = 0; ; ++InputIdx)
+			{
+				FExpressionInput* Input = Expr->GetInput(InputIdx);
+				if (!Input)
+				{
+					break;
+				}
+				if (Input->Expression != nullptr)
+				{
+					++OutConnectionCount;
+				}
+			}
+
+			// Collect parameter names
+			if (UMaterialExpressionScalarParameter* P = Cast<UMaterialExpressionScalarParameter>(Expr))
+			{
+				OutParamNames.Add(P->ParameterName.ToString());
+			}
+			else if (UMaterialExpressionVectorParameter* P = Cast<UMaterialExpressionVectorParameter>(Expr))
+			{
+				OutParamNames.Add(P->ParameterName.ToString());
+			}
+			else if (UMaterialExpressionTextureSampleParameter2D* P = Cast<UMaterialExpressionTextureSampleParameter2D>(Expr))
+			{
+				OutParamNames.Add(P->ParameterName.ToString());
+			}
+			else if (UMaterialExpressionStaticSwitchParameter* P = Cast<UMaterialExpressionStaticSwitchParameter>(Expr))
+			{
+				OutParamNames.Add(P->ParameterName.ToString());
+			}
+		}
+
+		// Count connections from material output pins
+		UMaterialEditorOnlyData* EditorData = Mat->GetEditorOnlyData();
+		if (EditorData)
+		{
+			auto CountOutput = [&](const FExpressionInput& Input)
+			{
+				if (Input.Expression != nullptr)
+				{
+					++OutConnectionCount;
+				}
+			};
+			CountOutput(EditorData->BaseColor);
+			CountOutput(EditorData->EmissiveColor);
+			CountOutput(EditorData->Metallic);
+			CountOutput(EditorData->Roughness);
+			CountOutput(EditorData->Specular);
+			CountOutput(EditorData->Normal);
+			CountOutput(EditorData->Opacity);
+			CountOutput(EditorData->OpacityMask);
+			CountOutput(EditorData->AmbientOcclusion);
+			CountOutput(EditorData->WorldPositionOffset);
+			CountOutput(EditorData->Refraction);
+		}
+	};
+
+	int32 NodeCountA = 0, NodeCountB = 0;
+	int32 ConnectionCountA = 0, ConnectionCountB = 0;
+	TSet<FString> ParamNamesA, ParamNamesB;
+
+	ComputeStats(MaterialA, NodeCountA, ConnectionCountA, ParamNamesA);
+	ComputeStats(MaterialB, NodeCountB, ConnectionCountB, ParamNamesB);
+
+	// --- Domain string conversion ---
+	auto DomainToString = [](EMaterialDomain Domain) -> FString
+	{
+		switch (Domain)
+		{
+		case MD_Surface:        return TEXT("Surface");
+		case MD_PostProcess:    return TEXT("PostProcess");
+		case MD_DeferredDecal:  return TEXT("DeferredDecal");
+		case MD_LightFunction:  return TEXT("LightFunction");
+		case MD_UI:             return TEXT("UI");
+		case MD_Volume:         return TEXT("Volume");
+		default:                return TEXT("Surface");
+		}
+	};
+
+	// --- BlendMode string conversion ---
+	auto BlendModeToString = [](EBlendMode BlendMode) -> FString
+	{
+		switch (BlendMode)
+		{
+		case BLEND_Opaque:      return TEXT("Opaque");
+		case BLEND_Masked:      return TEXT("Masked");
+		case BLEND_Translucent: return TEXT("Translucent");
+		case BLEND_Additive:    return TEXT("Additive");
+		case BLEND_Modulate:    return TEXT("Modulate");
+		default:                return TEXT("Opaque");
+		}
+	};
+
+	// --- Property diffs ---
+	TArray<TSharedPtr<FJsonValue>> PropertyDiffsArray;
+
+	if (MaterialA->MaterialDomain != MaterialB->MaterialDomain)
+	{
+		TSharedPtr<FJsonObject> DiffObj = MakeShared<FJsonObject>();
+		DiffObj->SetStringField(TEXT("property"), TEXT("domain"));
+		DiffObj->SetStringField(TEXT("value_a"), DomainToString(MaterialA->MaterialDomain));
+		DiffObj->SetStringField(TEXT("value_b"), DomainToString(MaterialB->MaterialDomain));
+		PropertyDiffsArray.Add(MakeShared<FJsonValueObject>(DiffObj));
+	}
+
+	if (MaterialA->BlendMode != MaterialB->BlendMode)
+	{
+		TSharedPtr<FJsonObject> DiffObj = MakeShared<FJsonObject>();
+		DiffObj->SetStringField(TEXT("property"), TEXT("blend_mode"));
+		DiffObj->SetStringField(TEXT("value_a"), BlendModeToString(MaterialA->BlendMode));
+		DiffObj->SetStringField(TEXT("value_b"), BlendModeToString(MaterialB->BlendMode));
+		PropertyDiffsArray.Add(MakeShared<FJsonValueObject>(DiffObj));
+	}
+
+	// --- Parameter set differences ---
+	TArray<TSharedPtr<FJsonValue>> ParamsOnlyInA;
+	TArray<TSharedPtr<FJsonValue>> ParamsOnlyInB;
+
+	for (const FString& ParamName : ParamNamesA)
+	{
+		if (!ParamNamesB.Contains(ParamName))
+		{
+			ParamsOnlyInA.Add(MakeShared<FJsonValueString>(ParamName));
+		}
+	}
+	for (const FString& ParamName : ParamNamesB)
+	{
+		if (!ParamNamesA.Contains(ParamName))
+		{
+			ParamsOnlyInB.Add(MakeShared<FJsonValueString>(ParamName));
+		}
+	}
+
+	// --- Build summary ---
+	TSharedPtr<FJsonObject> Summary = MakeShared<FJsonObject>();
+	Summary->SetNumberField(TEXT("node_count_a"), NodeCountA);
+	Summary->SetNumberField(TEXT("node_count_b"), NodeCountB);
+	Summary->SetNumberField(TEXT("node_count_diff"), NodeCountA - NodeCountB);
+	Summary->SetNumberField(TEXT("connection_count_diff"), ConnectionCountA - ConnectionCountB);
+
+	// --- Build response ---
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("material_a"), MaterialNameA);
+	Result->SetStringField(TEXT("material_b"), MaterialNameB);
+	Result->SetObjectField(TEXT("summary"), Summary);
+	Result->SetArrayField(TEXT("property_diffs"), PropertyDiffsArray);
+	Result->SetArrayField(TEXT("parameters_only_in_a"), ParamsOnlyInA);
+	Result->SetArrayField(TEXT("parameters_only_in_b"), ParamsOnlyInB);
+
+	return CreateSuccessResponse(Result);
+}
+
+
+// =========================================================================
+// FExtractMaterialParametersAction
+// =========================================================================
+
+bool FExtractMaterialParametersAction::Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError)
+{
+	FString MaterialName;
+	return GetRequiredString(Params, TEXT("material_name"), MaterialName, OutError);
+}
+
+TSharedPtr<FJsonObject> FExtractMaterialParametersAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	FString Error;
+	FString MaterialName;
+	GetRequiredString(Params, TEXT("material_name"), MaterialName, Error);
+
+	UMaterial* Material = FindMaterial(MaterialName, Error);
+	if (!Material)
+	{
+		return CreateErrorResponse(Error, TEXT("material_not_found"));
+	}
+
+	const TArray<TObjectPtr<UMaterialExpression>>& Expressions = Material->GetExpressionCollection().Expressions;
+	TArray<TSharedPtr<FJsonValue>> ParametersArray;
+
+	for (UMaterialExpression* Expr : Expressions)
+	{
+		if (!Expr) { continue; }
+
+		// Cast to base parameter class to access Group and SortPriority
+		UMaterialExpressionParameter* BaseParam = Cast<UMaterialExpressionParameter>(Expr);
+		if (!BaseParam) { continue; }
+
+		TSharedPtr<FJsonObject> ParamObj = MakeShared<FJsonObject>();
+		ParamObj->SetStringField(TEXT("name"), BaseParam->ParameterName.ToString());
+		ParamObj->SetStringField(TEXT("group"), BaseParam->Group.ToString());
+		ParamObj->SetNumberField(TEXT("sort_priority"), BaseParam->SortPriority);
+
+		if (UMaterialExpressionScalarParameter* P = Cast<UMaterialExpressionScalarParameter>(Expr))
+		{
+			ParamObj->SetStringField(TEXT("type"), TEXT("ScalarParameter"));
+			ParamObj->SetNumberField(TEXT("default_value"), P->DefaultValue);
+		}
+		else if (UMaterialExpressionVectorParameter* P = Cast<UMaterialExpressionVectorParameter>(Expr))
+		{
+			ParamObj->SetStringField(TEXT("type"), TEXT("VectorParameter"));
+			TArray<TSharedPtr<FJsonValue>> ColorArr;
+			ColorArr.Add(MakeShared<FJsonValueNumber>(P->DefaultValue.R));
+			ColorArr.Add(MakeShared<FJsonValueNumber>(P->DefaultValue.G));
+			ColorArr.Add(MakeShared<FJsonValueNumber>(P->DefaultValue.B));
+			ColorArr.Add(MakeShared<FJsonValueNumber>(P->DefaultValue.A));
+			ParamObj->SetArrayField(TEXT("default_value"), ColorArr);
+		}
+		else if (UMaterialExpressionTextureSampleParameter2D* P = Cast<UMaterialExpressionTextureSampleParameter2D>(Expr))
+		{
+			ParamObj->SetStringField(TEXT("type"), TEXT("TextureSampleParameter2D"));
+			ParamObj->SetStringField(TEXT("default_value"), P->Texture ? P->Texture->GetPathName() : TEXT(""));
+		}
+		else if (UMaterialExpressionTextureObjectParameter* P = Cast<UMaterialExpressionTextureObjectParameter>(Expr))
+		{
+			(void)P;
+			ParamObj->SetStringField(TEXT("type"), TEXT("TextureObjectParameter"));
+			ParamObj->SetStringField(TEXT("default_value"), TEXT(""));
+		}
+		else if (UMaterialExpressionStaticSwitchParameter* P = Cast<UMaterialExpressionStaticSwitchParameter>(Expr))
+		{
+			ParamObj->SetStringField(TEXT("type"), TEXT("StaticSwitchParameter"));
+			ParamObj->SetBoolField(TEXT("default_value"), P->DefaultValue);
+		}
+		else
+		{
+			continue; // Unknown parameter subtype
+		}
+
+		ParametersArray.Add(MakeShared<FJsonValueObject>(ParamObj));
+	}
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("material_name"), MaterialName);
+	Result->SetArrayField(TEXT("parameters"), ParametersArray);
+
+	return CreateSuccessResponse(Result);
+}
+
+// =========================================================================
+// FBatchCreateMaterialInstancesAction
+// =========================================================================
+
+bool FBatchCreateMaterialInstancesAction::Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError)
+{
+	FString ParentMaterial;
+	if (!GetRequiredString(Params, TEXT("parent_material"), ParentMaterial, OutError)) return false;
+
+	const TArray<TSharedPtr<FJsonValue>>* InstancesArray;
+	if (!Params->TryGetArrayField(TEXT("instances"), InstancesArray) || InstancesArray->Num() == 0)
+	{
+		OutError = TEXT("'instances' array is required and must be non-empty");
+		return false;
+	}
+
+	return true;
+}
+
+TSharedPtr<FJsonObject> FBatchCreateMaterialInstancesAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	FString Error;
+	FString ParentMaterialName;
+	GetRequiredString(Params, TEXT("parent_material"), ParentMaterialName, Error);
+
+	UMaterial* ParentMaterial = FindMaterial(ParentMaterialName, Error);
+	if (!ParentMaterial)
+	{
+		return CreateErrorResponse(Error, TEXT("parent_not_found"));
+	}
+
+	const TArray<TSharedPtr<FJsonValue>>* InstancesArray;
+	Params->TryGetArrayField(TEXT("instances"), InstancesArray);
+
+	int32 CreatedCount = 0;
+	int32 FailedCount = 0;
+	TArray<TSharedPtr<FJsonValue>> ResultsArray;
+
+	for (const TSharedPtr<FJsonValue>& InstanceVal : *InstancesArray)
+	{
+		const TSharedPtr<FJsonObject>* InstanceObjPtr;
+		if (!InstanceVal->TryGetObject(InstanceObjPtr) || !InstanceObjPtr->IsValid())
+		{
+			++FailedCount;
+			TSharedPtr<FJsonObject> FailObj = MakeShared<FJsonObject>();
+			FailObj->SetStringField(TEXT("name"), TEXT(""));
+			FailObj->SetBoolField(TEXT("success"), false);
+			FailObj->SetStringField(TEXT("error"), TEXT("Instance entry is not a valid JSON object"));
+			ResultsArray.Add(MakeShared<FJsonValueObject>(FailObj));
+			continue;
+		}
+
+		const TSharedPtr<FJsonObject>& InstanceObj = *InstanceObjPtr;
+
+		FString InstanceName;
+		if (!InstanceObj->TryGetStringField(TEXT("name"), InstanceName) || InstanceName.IsEmpty())
+		{
+			++FailedCount;
+			TSharedPtr<FJsonObject> FailObj = MakeShared<FJsonObject>();
+			FailObj->SetStringField(TEXT("name"), TEXT(""));
+			FailObj->SetBoolField(TEXT("success"), false);
+			FailObj->SetStringField(TEXT("error"), TEXT("Instance 'name' is required"));
+			ResultsArray.Add(MakeShared<FJsonValueObject>(FailObj));
+			continue;
+		}
+
+		FString InstancePath = TEXT("/Game/Materials");
+		InstanceObj->TryGetStringField(TEXT("path"), InstancePath);
+
+		// Validate scalar_parameters: values must be JSON numbers
+		FString ValidationError;
+		if (InstanceObj->HasField(TEXT("scalar_parameters")))
+		{
+			const TSharedPtr<FJsonObject> ScalarParams = InstanceObj->GetObjectField(TEXT("scalar_parameters"));
+			for (const auto& Pair : ScalarParams->Values)
+			{
+				if (Pair.Value->Type != EJson::Number)
+				{
+					ValidationError = FString::Printf(
+						TEXT("Invalid scalar parameter '%s': expected number, got %s"),
+						*Pair.Key,
+						Pair.Value->Type == EJson::String ? TEXT("string") :
+						Pair.Value->Type == EJson::Array  ? TEXT("array")  :
+						Pair.Value->Type == EJson::Object ? TEXT("object") : TEXT("non-number"));
+					break;
+				}
+			}
+		}
+
+		// Validate vector_parameters: values must be 4-element arrays
+		if (ValidationError.IsEmpty() && InstanceObj->HasField(TEXT("vector_parameters")))
+		{
+			const TSharedPtr<FJsonObject> VectorParams = InstanceObj->GetObjectField(TEXT("vector_parameters"));
+			for (const auto& Pair : VectorParams->Values)
+			{
+				const TArray<TSharedPtr<FJsonValue>>* Arr;
+				if (!Pair.Value->TryGetArray(Arr) || Arr->Num() != 4)
+				{
+					ValidationError = FString::Printf(
+						TEXT("Invalid vector parameter '%s': expected 4-element array"), *Pair.Key);
+					break;
+				}
+			}
+		}
+
+if (!ValidationError.IsEmpty())
+{
+++FailedCount;
+TSharedPtr<FJsonObject> FailObj = MakeShared<FJsonObject>();
+FailObj->SetStringField(TEXT("name"), InstanceName);
+FailObj->SetBoolField(TEXT("success"), false);
+FailObj->SetStringField(TEXT("error"), ValidationError);
+ResultsArray.Add(MakeShared<FJsonValueObject>(FailObj));
+continue;
+}
+
+// Create the instance
+FString InstancePackagePath = InstancePath / InstanceName;
+
+// Clean up existing
+UPackage* ExistingPackage = FindPackage(nullptr, *InstancePackagePath);
+if (ExistingPackage)
+{
+UMaterialInstanceConstant* ExistingInstance = FindObject<UMaterialInstanceConstant>(ExistingPackage, *InstanceName);
+if (ExistingInstance)
+{
+FString TempName = FString::Printf(TEXT("%s_TEMP_%d"), *InstanceName, FMath::Rand());
+ExistingInstance->Rename(*TempName, GetTransientPackage(),
+REN_DoNotDirty | REN_DontCreateRedirectors | REN_NonTransactional);
+ExistingInstance->MarkAsGarbage();
+ExistingPackage->MarkAsGarbage();
+}
+}
+if (UEditorAssetLibrary::DoesAssetExist(InstancePackagePath))
+{
+UEditorAssetLibrary::DeleteAsset(InstancePackagePath);
+}
+
+UPackage* Package = CreatePackage(*InstancePackagePath);
+if (!Package)
+{
+++FailedCount;
+TSharedPtr<FJsonObject> FailObj = MakeShared<FJsonObject>();
+FailObj->SetStringField(TEXT("name"), InstanceName);
+FailObj->SetBoolField(TEXT("success"), false);
+FailObj->SetStringField(TEXT("error"), TEXT("Failed to create package"));
+ResultsArray.Add(MakeShared<FJsonValueObject>(FailObj));
+continue;
+}
+Package->FullyLoad();
+
+UMaterialInstanceConstantFactoryNew* Factory = NewObject<UMaterialInstanceConstantFactoryNew>();
+Factory->InitialParent = ParentMaterial;
+
+UMaterialInstanceConstant* NewInstance = Cast<UMaterialInstanceConstant>(Factory->FactoryCreateNew(
+UMaterialInstanceConstant::StaticClass(), Package, *InstanceName,
+RF_Public | RF_Standalone, nullptr, GWarn));
+
+if (!NewInstance)
+{
+++FailedCount;
+TSharedPtr<FJsonObject> FailObj = MakeShared<FJsonObject>();
+FailObj->SetStringField(TEXT("name"), InstanceName);
+FailObj->SetBoolField(TEXT("success"), false);
+FailObj->SetStringField(TEXT("error"), TEXT("Failed to create material instance"));
+ResultsArray.Add(MakeShared<FJsonValueObject>(FailObj));
+continue;
+}
+
+// Set scalar parameters
+if (InstanceObj->HasField(TEXT("scalar_parameters")))
+{
+const TSharedPtr<FJsonObject> ScalarParams = InstanceObj->GetObjectField(TEXT("scalar_parameters"));
+for (const auto& Pair : ScalarParams->Values)
+{
+NewInstance->SetScalarParameterValueEditorOnly(FName(*Pair.Key), Pair.Value->AsNumber());
+}
+}
+
+// Set vector parameters
+if (InstanceObj->HasField(TEXT("vector_parameters")))
+{
+const TSharedPtr<FJsonObject> VectorParams = InstanceObj->GetObjectField(TEXT("vector_parameters"));
+for (const auto& Pair : VectorParams->Values)
+{
+const TArray<TSharedPtr<FJsonValue>>* Arr;
+if (Pair.Value->TryGetArray(Arr) && Arr->Num() >= 3)
+{
+FLinearColor Color(
+(*Arr)[0]->AsNumber(),
+(*Arr)[1]->AsNumber(),
+(*Arr)[2]->AsNumber(),
+Arr->Num() > 3 ? (*Arr)[3]->AsNumber() : 1.0f);
+NewInstance->SetVectorParameterValueEditorOnly(FName(*Pair.Key), Color);
+}
+}
+}
+
+// Set texture parameters
+if (InstanceObj->HasField(TEXT("texture_parameters")))
+{
+const TSharedPtr<FJsonObject> TextureParams = InstanceObj->GetObjectField(TEXT("texture_parameters"));
+for (const auto& Pair : TextureParams->Values)
+{
+FString TexturePath = Pair.Value->AsString();
+UTexture* Texture = LoadObject<UTexture>(nullptr, *TexturePath);
+if (!Texture)
+{
+Texture = LoadObject<UTexture>(nullptr, *(TEXT("/Game/") + TexturePath));
+}
+if (Texture)
+{
+NewInstance->SetTextureParameterValueEditorOnly(FName(*Pair.Key), Texture);
+}
+}
+}
+
+// Set static switch parameters
+if (InstanceObj->HasField(TEXT("static_switch_parameters")))
+{
+const TSharedPtr<FJsonObject> SwitchParams = InstanceObj->GetObjectField(TEXT("static_switch_parameters"));
+for (const auto& Pair : SwitchParams->Values)
+{
+NewInstance->SetStaticSwitchParameterValueEditorOnly(FName(*Pair.Key), Pair.Value->AsBool());
+}
+}
+
+Package->SetDirtyFlag(true);
+NewInstance->MarkPackageDirty();
+FAssetRegistryModule::AssetCreated(NewInstance);
+Context.MarkPackageDirty(Package);
+
+++CreatedCount;
+TSharedPtr<FJsonObject> SuccessObj = MakeShared<FJsonObject>();
+SuccessObj->SetStringField(TEXT("name"), InstanceName);
+SuccessObj->SetStringField(TEXT("path"), InstancePackagePath);
+SuccessObj->SetBoolField(TEXT("success"), true);
+ResultsArray.Add(MakeShared<FJsonValueObject>(SuccessObj));
+}
+
+TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+Result->SetNumberField(TEXT("created_count"), CreatedCount);
+Result->SetNumberField(TEXT("failed_count"), FailedCount);
+Result->SetArrayField(TEXT("results"), ResultsArray);
+
+return CreateSuccessResponse(Result);
+}
+
+// =========================================================================
+// FReplaceMaterialNodeAction
+// =========================================================================
+
+bool FReplaceMaterialNodeAction::Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError)
+{
+	FString MaterialName, NodeName, NewClass;
+	if (!GetRequiredString(Params, TEXT("material_name"), MaterialName, OutError)) return false;
+	if (!GetRequiredString(Params, TEXT("node_name"), NodeName, OutError)) return false;
+	if (!GetRequiredString(Params, TEXT("new_expression_class"), NewClass, OutError)) return false;
+	return true;
+}
+
+TSharedPtr<FJsonObject> FReplaceMaterialNodeAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	FString Error;
+	FString MaterialName, NodeName, NewExpressionClass;
+	GetRequiredString(Params, TEXT("material_name"), MaterialName, Error);
+	GetRequiredString(Params, TEXT("node_name"), NodeName, Error);
+	GetRequiredString(Params, TEXT("new_expression_class"), NewExpressionClass, Error);
+
+	// 1. Find material
+	UMaterial* Material = FindMaterial(MaterialName, Error);
+	if (!Material)
+	{
+		return CreateErrorResponse(Error, TEXT("material_not_found"));
+	}
+
+	const TArray<TObjectPtr<UMaterialExpression>>& Expressions = Material->GetExpressionCollection().Expressions;
+
+	// 2. Find target node by Desc, GetName(), or parameter name
+	UMaterialExpression* TargetExpr = nullptr;
+	for (UMaterialExpression* Expr : Expressions)
+	{
+		if (!Expr || Expr->IsA<UMaterialExpressionComment>()) { continue; }
+		if (Expr->Desc == NodeName || Expr->GetName() == NodeName)
+		{
+			TargetExpr = Expr;
+			break;
+		}
+		if (UMaterialExpressionParameter* Param = Cast<UMaterialExpressionParameter>(Expr))
+		{
+			if (Param->ParameterName.ToString() == NodeName)
+			{
+				TargetExpr = Expr;
+				break;
+			}
+		}
+	}
+
+	if (!TargetExpr)
+	{
+		// Build available_nodes list and embed in error response
+		TArray<TSharedPtr<FJsonValue>> AvailableNodes;
+		for (UMaterialExpression* Expr : Expressions)
+		{
+			if (!Expr || Expr->IsA<UMaterialExpressionComment>()) { continue; }
+			FString Name = !Expr->Desc.IsEmpty() ? Expr->Desc : Expr->GetName();
+			AvailableNodes.Add(MakeShared<FJsonValueString>(Name));
+		}
+		TSharedPtr<FJsonObject> ErrResp = CreateErrorResponse(
+			FString::Printf(TEXT("Node '%s' not found in material '%s'"), *NodeName, *MaterialName),
+			TEXT("node_not_found"));
+		ErrResp->SetArrayField(TEXT("available_nodes"), AvailableNodes);
+		return ErrResp;
+	}
+
+	// 3. Record output connections: scan all other expressions for inputs pointing to TargetExpr
+	struct FOutputConn { UMaterialExpression* OtherExpr; int32 InputIndex; int32 OutputIndex; };
+	TArray<FOutputConn> OutputConns;
+	for (UMaterialExpression* Expr : Expressions)
+	{
+		if (!Expr || Expr == TargetExpr || Expr->IsA<UMaterialExpressionComment>()) { continue; }
+		for (int32 i = 0; ; ++i)
+		{
+			FExpressionInput* Input = Expr->GetInput(i);
+			if (!Input) { break; }
+			if (Input->Expression == TargetExpr)
+			{
+				OutputConns.Add({ Expr, i, Input->OutputIndex });
+			}
+		}
+	}
+
+	// 4. Record input connections on target node
+	struct FInputConn { int32 InputIndex; UMaterialExpression* SourceExpr; int32 SourceOutputIndex; };
+	TArray<FInputConn> InputConns;
+	for (int32 i = 0; ; ++i)
+	{
+		FExpressionInput* Input = TargetExpr->GetInput(i);
+		if (!Input) { break; }
+		if (Input->Expression != nullptr)
+		{
+			InputConns.Add({ i, Input->Expression, Input->OutputIndex });
+		}
+	}
+
+	// 5. Create new node
+	UClass* NewClass = ResolveExpressionClass(NewExpressionClass);
+	if (!NewClass)
+	{
+		return CreateErrorResponse(
+			FString::Printf(TEXT("Unknown expression class '%s'"), *NewExpressionClass),
+			TEXT("invalid_expression_class"));
+	}
+
+	UMaterialExpression* NewExpr = NewObject<UMaterialExpression>(Material, NewClass);
+	if (!NewExpr)
+	{
+		return CreateErrorResponse(TEXT("Failed to create new expression node"), TEXT("creation_failed"));
+	}
+
+	// Same editor position as old node
+	NewExpr->MaterialExpressionEditorX = TargetExpr->MaterialExpressionEditorX;
+	NewExpr->MaterialExpressionEditorY = TargetExpr->MaterialExpressionEditorY;
+	NewExpr->Desc = TargetExpr->Desc;
+
+	// 6. Value migration
+	if (UMaterialExpressionConstant* OldConst = Cast<UMaterialExpressionConstant>(TargetExpr))
+	{
+		if (UMaterialExpressionScalarParameter* NewScalar = Cast<UMaterialExpressionScalarParameter>(NewExpr))
+		{
+			NewScalar->DefaultValue = OldConst->R;
+			NewScalar->ParameterName = FName(*NodeName);
+		}
+	}
+	else if (UMaterialExpressionConstant3Vector* OldConst3 = Cast<UMaterialExpressionConstant3Vector>(TargetExpr))
+	{
+		if (UMaterialExpressionVectorParameter* NewVec = Cast<UMaterialExpressionVectorParameter>(NewExpr))
+		{
+			NewVec->DefaultValue = FLinearColor(OldConst3->Constant.R, OldConst3->Constant.G, OldConst3->Constant.B, 1.0f);
+			NewVec->ParameterName = FName(*NodeName);
+		}
+	}
+
+	// 7. Apply new_properties if provided
+	if (Params->HasField(TEXT("new_properties")))
+	{
+		const TSharedPtr<FJsonObject> NewProps = Params->GetObjectField(TEXT("new_properties"));
+		if (UMaterialExpressionScalarParameter* P = Cast<UMaterialExpressionScalarParameter>(NewExpr))
+		{
+			FString Val;
+			double Num;
+			if (NewProps->TryGetStringField(TEXT("ParameterName"), Val)) P->ParameterName = FName(*Val);
+			if (NewProps->TryGetNumberField(TEXT("DefaultValue"), Num)) P->DefaultValue = (float)Num;
+		}
+		else if (UMaterialExpressionVectorParameter* P = Cast<UMaterialExpressionVectorParameter>(NewExpr))
+		{
+			FString Val;
+			if (NewProps->TryGetStringField(TEXT("ParameterName"), Val)) P->ParameterName = FName(*Val);
+		}
+	}
+
+	// 8. Add new node to material
+	Material->GetExpressionCollection().AddExpression(NewExpr);
+
+	// 9. Rebuild connections
+	TArray<TSharedPtr<FJsonValue>> MigratedConns;
+	TArray<TSharedPtr<FJsonValue>> FailedConns;
+
+	// Output connections: other exprs that pointed to old node now point to new node
+	for (const FOutputConn& Conn : OutputConns)
+	{
+		FExpressionInput* Input = Conn.OtherExpr->GetInput(Conn.InputIndex);
+		if (Input)
+		{
+			Input->Expression = NewExpr;
+			Input->OutputIndex = Conn.OutputIndex;
+			TSharedPtr<FJsonObject> ConnObj = MakeShared<FJsonObject>();
+			ConnObj->SetStringField(TEXT("target_node"), !Conn.OtherExpr->Desc.IsEmpty() ? Conn.OtherExpr->Desc : Conn.OtherExpr->GetName());
+			ConnObj->SetNumberField(TEXT("target_input"), Conn.InputIndex);
+			MigratedConns.Add(MakeShared<FJsonValueObject>(ConnObj));
+		}
+		else
+		{
+			TSharedPtr<FJsonObject> ConnObj = MakeShared<FJsonObject>();
+			ConnObj->SetStringField(TEXT("target_node"), !Conn.OtherExpr->Desc.IsEmpty() ? Conn.OtherExpr->Desc : Conn.OtherExpr->GetName());
+			ConnObj->SetNumberField(TEXT("target_input"), Conn.InputIndex);
+			ConnObj->SetStringField(TEXT("reason"), TEXT("Input index no longer valid on new node"));
+			FailedConns.Add(MakeShared<FJsonValueObject>(ConnObj));
+		}
+	}
+
+	// Input connections: old node's inputs -> new node's inputs (if compatible)
+	for (const FInputConn& Conn : InputConns)
+	{
+		FExpressionInput* Input = NewExpr->GetInput(Conn.InputIndex);
+		if (Input)
+		{
+			Input->Expression = Conn.SourceExpr;
+			Input->OutputIndex = Conn.SourceOutputIndex;
+			TSharedPtr<FJsonObject> ConnObj = MakeShared<FJsonObject>();
+			ConnObj->SetStringField(TEXT("source_node"), !Conn.SourceExpr->Desc.IsEmpty() ? Conn.SourceExpr->Desc : Conn.SourceExpr->GetName());
+			ConnObj->SetNumberField(TEXT("input_index"), Conn.InputIndex);
+			MigratedConns.Add(MakeShared<FJsonValueObject>(ConnObj));
+		}
+		else
+		{
+			TSharedPtr<FJsonObject> ConnObj = MakeShared<FJsonObject>();
+			ConnObj->SetStringField(TEXT("source_node"), !Conn.SourceExpr->Desc.IsEmpty() ? Conn.SourceExpr->Desc : Conn.SourceExpr->GetName());
+			ConnObj->SetNumberField(TEXT("input_index"), Conn.InputIndex);
+			ConnObj->SetStringField(TEXT("reason"), TEXT("Input index not available on new node type"));
+			FailedConns.Add(MakeShared<FJsonValueObject>(ConnObj));
+		}
+	}
+
+	// 10. Remove old node
+	Material->GetExpressionCollection().RemoveExpression(TargetExpr);
+
+	// 11. Compile (same logic as FCompileMaterialAction)
+	Material->PreEditChange(nullptr);
+	Material->PostEditChange();
+	Material->ForceRecompileForRendering();
+
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 7
+	FMaterialResource* MatResource = Material->GetMaterialResource(GMaxRHIShaderPlatform);
+#else
+	FMaterialResource* MatResource = Material->GetMaterialResource(GMaxRHIFeatureLevel);
+#endif
+	if (MatResource)
+	{
+		MatResource->FinishCompilation();
+	}
+
+	TArray<FString> CompileErrors;
+	if (MatResource)
+	{
+		CompileErrors = MatResource->GetCompileErrors();
+	}
+	bool bCompileSuccess = (MatResource != nullptr) && (CompileErrors.Num() == 0);
+
+	// 12. Mark modified
+	MarkMaterialModified(Material, Context);
+
+	// 13. Build response
+	FString NewNodeName = !NewExpr->Desc.IsEmpty() ? NewExpr->Desc : NewExpr->GetName();
+
+	TSharedPtr<FJsonObject> CompileResult = MakeShared<FJsonObject>();
+	CompileResult->SetBoolField(TEXT("success"), bCompileSuccess);
+	CompileResult->SetNumberField(TEXT("error_count"), CompileErrors.Num());
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("replaced_node"), NodeName);
+	Result->SetStringField(TEXT("new_node"), NewNodeName);
+	Result->SetStringField(TEXT("new_expression_class"), NewExpressionClass);
+	Result->SetArrayField(TEXT("migrated_connections"), MigratedConns);
+	Result->SetArrayField(TEXT("failed_connections"), FailedConns);
+	Result->SetObjectField(TEXT("compile_result"), CompileResult);
 
 	return CreateSuccessResponse(Result);
 }

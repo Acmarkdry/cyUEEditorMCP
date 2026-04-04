@@ -2672,6 +2672,129 @@ _MATERIAL_ACTIONS = [
         },
         capabilities=("read",),
     ),
+    # Phase 6: Analysis & Batch Actions
+    ActionDef(
+        id="material.analyze_complexity",
+        command="analyze_material_complexity",
+        tags=("material", "analyze", "analysis", "complexity", "performance", "instructions", "read"),
+        description="Analyze material graph complexity: node count, type distribution, connection count, shader instructions, parameters, and texture samples.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "material_name": {"type": "string", "description": "Name of the Material"}
+            },
+            "required": ["material_name"]
+        },
+        capabilities=("read",),
+        examples=({"material_name": "M_Glow"},),
+    ),
+    ActionDef(
+        id="material.analyze_dependencies",
+        command="analyze_material_dependencies",
+        tags=("material", "analyze", "analysis", "dependencies", "textures", "references", "read"),
+        description="Analyze external asset dependencies (textures, material functions) and level actor references for a material.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "material_name": {"type": "string", "description": "Name of the Material"}
+            },
+            "required": ["material_name"]
+        },
+        capabilities=("read",),
+        examples=({"material_name": "M_Rock"},),
+    ),
+    ActionDef(
+        id="material.diagnose",
+        command="diagnose_material",
+        tags=("material", "analyze", "analysis", "diagnose", "diagnostic", "issues", "health", "read"),
+        description="Diagnose a material for common issues: incompatible domain/blend mode, excessive texture samples, orphan nodes, and custom HLSL usage.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "material_name": {"type": "string", "description": "Name of the Material"}
+            },
+            "required": ["material_name"]
+        },
+        capabilities=("read",),
+        examples=({"material_name": "M_Character"},),
+    ),
+    ActionDef(
+        id="material.diff",
+        command="diff_materials",
+        tags=("material", "analyze", "analysis", "diff", "compare", "difference", "read"),
+        description="Compare two materials and report differences in node count, connections, material properties, and parameters.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "material_name_a": {"type": "string", "description": "Name of the first Material"},
+                "material_name_b": {"type": "string", "description": "Name of the second Material"}
+            },
+            "required": ["material_name_a", "material_name_b"]
+        },
+        capabilities=("read",),
+        examples=({"material_name_a": "M_Base", "material_name_b": "M_Base_V2"},),
+    ),
+    ActionDef(
+        id="material.extract_parameters",
+        command="extract_material_parameters",
+        tags=("material", "analyze", "analysis", "parameters", "extract", "scalar", "vector", "texture", "read"),
+        description="Extract all parameter nodes from a material with their metadata: name, type, default value, group, and sort priority.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "material_name": {"type": "string", "description": "Name of the Material"}
+            },
+            "required": ["material_name"]
+        },
+        capabilities=("read",),
+        examples=({"material_name": "M_Master"},),
+    ),
+    ActionDef(
+        id="material.batch_create_instances",
+        command="batch_create_material_instances",
+        tags=("material", "instance", "create", "batch", "bulk", "parameter"),
+        description="Create multiple Material Instances from a parent material in a single call. Single instance failures do not abort the batch.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "parent_material": {"type": "string", "description": "Name of the parent Material"},
+                "instances": {
+                    "type": "array",
+                    "description": "Array of instance definitions {name, path?, scalar_parameters?, vector_parameters?, texture_parameters?, static_switch_parameters?}",
+                    "items": {"type": "object"}
+                }
+            },
+            "required": ["parent_material", "instances"]
+        },
+        examples=(
+            {
+                "parent_material": "M_Master",
+                "instances": [
+                    {"name": "MI_Red", "scalar_parameters": {"Roughness": 0.2}, "vector_parameters": {"BaseColor": [1, 0, 0, 1]}},
+                    {"name": "MI_Blue", "scalar_parameters": {"Roughness": 0.5}, "vector_parameters": {"BaseColor": [0, 0, 1, 1]}},
+                ]
+            },
+        ),
+    ),
+    ActionDef(
+        id="material.replace_node",
+        command="replace_material_node",
+        tags=("material", "replace", "node", "expression", "refactor", "swap"),
+        description="Replace an existing material expression node with a new one of a different type, migrating connections and constant values where possible, then recompiles the material.",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "material_name": {"type": "string", "description": "Name of the Material"},
+                "node_name": {"type": "string", "description": "Name of the node to replace"},
+                "new_expression_class": {"type": "string", "description": "Target expression type (e.g. Multiply, Add, Lerp)"},
+                "new_properties": {"type": "object", "description": "Optional property overrides for the new node"}
+            },
+            "required": ["material_name", "node_name", "new_expression_class"]
+        },
+        examples=(
+            {"material_name": "M_Glow", "node_name": "blend_node", "new_expression_class": "Lerp", "new_properties": {"ConstAlpha": 0.5}},
+        ),
+    ),
 ]
 
 

@@ -186,6 +186,92 @@ def get_tools() -> list[Tool]:
                 "required": ["name"]
             }
         ),
+        Tool(
+            name="analyze_material_complexity",
+            description="Analyze material graph complexity: node count, type distribution, connection count, shader instructions, parameters, and texture samples.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "material_name": {"type": "string", "description": "Name of the Material"}
+                },
+                "required": ["material_name"]
+            }
+        ),
+        Tool(
+            name="analyze_material_dependencies",
+            description="Analyze external asset dependencies (textures, material functions) and level actor references for a material.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "material_name": {"type": "string", "description": "Name of the Material"}
+                },
+                "required": ["material_name"]
+            }
+        ),
+        Tool(
+            name="diagnose_material",
+            description="Diagnose a material for common issues: incompatible domain/blend mode, excessive texture samples, orphan nodes, and custom HLSL usage.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "material_name": {"type": "string", "description": "Name of the Material"}
+                },
+                "required": ["material_name"]
+            }
+        ),
+        Tool(
+            name="diff_materials",
+            description="Compare two materials and report differences in node count, connections, material properties, and parameters.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "material_name_a": {"type": "string", "description": "Name of the first Material"},
+                    "material_name_b": {"type": "string", "description": "Name of the second Material"}
+                },
+                "required": ["material_name_a", "material_name_b"]
+            }
+        ),
+        Tool(
+            name="extract_material_parameters",
+            description="Extract all parameter nodes from a material with their metadata: name, type, default value, group, and sort priority.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "material_name": {"type": "string", "description": "Name of the Material"}
+                },
+                "required": ["material_name"]
+            }
+        ),
+        Tool(
+            name="batch_create_material_instances",
+            description="Create multiple Material Instances from a parent material in a single call. Single instance failures do not abort the batch.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "parent_material": {"type": "string", "description": "Name of the parent Material"},
+                    "instances": {
+                        "type": "array",
+                        "description": "Array of instance definitions {name, path?, scalar_parameters?, vector_parameters?, texture_parameters?, static_switch_parameters?}",
+                        "items": {"type": "object"}
+                    }
+                },
+                "required": ["parent_material", "instances"]
+            }
+        ),
+        Tool(
+            name="replace_material_node",
+            description="Replace an existing material expression node with a new one of a different type, migrating connections and constant values where possible.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "material_name": {"type": "string", "description": "Name of the Material"},
+                    "node_name": {"type": "string", "description": "Name of the node to replace"},
+                    "new_expression_class": {"type": "string", "description": "Target expression type"},
+                    "new_properties": {"type": "object", "description": "Property overrides for the new node (optional)"}
+                },
+                "required": ["material_name", "node_name", "new_expression_class"]
+            }
+        ),
     ]
 
 
@@ -200,6 +286,13 @@ TOOL_HANDLERS = {
     "compile_material": "compile_material",
     "create_material_instance": "create_material_instance",
     "create_post_process_volume": "create_post_process_volume",
+    "analyze_material_complexity": "analyze_material_complexity",
+    "analyze_material_dependencies": "analyze_material_dependencies",
+    "diagnose_material": "diagnose_material",
+    "diff_materials": "diff_materials",
+    "extract_material_parameters": "extract_material_parameters",
+    "batch_create_material_instances": "batch_create_material_instances",
+    "replace_material_node": "replace_material_node",
 }
 
 

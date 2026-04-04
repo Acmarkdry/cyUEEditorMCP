@@ -572,3 +572,185 @@ protected:
 	virtual FString GetActionName() const override { return TEXT("refresh_material_editor"); }
 	virtual bool RequiresSave() const override { return false; }
 };
+
+
+/**
+ * FAnalyzeMaterialComplexityAction
+ *
+ * Analyzes material graph complexity: node count, type distribution,
+ * connection count, shader instructions, parameters, and texture samples.
+ *
+ * Parameters:
+ *   - material_name (required): Name of the Material
+ *
+ * Returns:
+ *   - material_name, node_count, node_type_distribution{}, connection_count,
+ *     shader_instructions{vs, ps, compiled}, parameters[], texture_samples[]
+ */
+class UEEDITORMCP_API FAnalyzeMaterialComplexityAction : public FMaterialAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
+	virtual FString GetActionName() const override { return TEXT("analyze_material_complexity"); }
+	virtual bool RequiresSave() const override { return false; }
+};
+
+
+/**
+ * FAnalyzeMaterialDependenciesAction
+ *
+ * Analyzes external asset dependencies (textures, material functions) and
+ * level actor references for a material.
+ *
+ * Parameters:
+ *   - material_name (required): Name of the Material
+ *
+ * Returns:
+ *   - material_name, external_assets[]{type, path, node_name},
+ *     level_references[]{actor_name, component_name}, level_reference_count
+ */
+class UEEDITORMCP_API FAnalyzeMaterialDependenciesAction : public FMaterialAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
+	virtual FString GetActionName() const override { return TEXT("analyze_material_dependencies"); }
+	virtual bool RequiresSave() const override { return false; }
+};
+
+
+/**
+ * FDiagnoseMaterialAction
+ *
+ * Diagnoses a material for common issues: incompatible domain/blend mode,
+ * excessive texture samples, orphan nodes, and custom HLSL usage.
+ *
+ * Parameters:
+ *   - material_name (required): Name of the Material
+ *
+ * Returns:
+ *   - material_name, status("healthy"|"has_issues"),
+ *     diagnostics[]{severity, code, message, node_name?}
+ */
+class UEEDITORMCP_API FDiagnoseMaterialAction : public FMaterialAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
+	virtual FString GetActionName() const override { return TEXT("diagnose_material"); }
+	virtual bool RequiresSave() const override { return false; }
+};
+
+
+/**
+ * FDiffMaterialsAction
+ *
+ * Compares two materials and reports differences in node count, connections,
+ * material properties, and parameters.
+ *
+ * Parameters:
+ *   - material_name_a (required): Name of the first Material
+ *   - material_name_b (required): Name of the second Material
+ *
+ * Returns:
+ *   - material_a, material_b,
+ *     summary{node_count_a, node_count_b, node_count_diff, connection_count_diff},
+ *     property_diffs[]{property, value_a, value_b},
+ *     parameters_only_in_a[], parameters_only_in_b[]
+ */
+class UEEDITORMCP_API FDiffMaterialsAction : public FMaterialAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
+	virtual FString GetActionName() const override { return TEXT("diff_materials"); }
+	virtual bool RequiresSave() const override { return false; }
+};
+
+
+/**
+ * FExtractMaterialParametersAction
+ *
+ * Extracts all parameter nodes from a material with their metadata:
+ * name, type, default value, group, and sort priority. Read-only.
+ *
+ * Parameters:
+ *   - material_name (required): Name of the Material
+ *
+ * Returns:
+ *   - material_name, parameters[]{name, type, default_value, group, sort_priority}
+ */
+class UEEDITORMCP_API FExtractMaterialParametersAction : public FMaterialAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
+	virtual FString GetActionName() const override { return TEXT("extract_material_parameters"); }
+	virtual bool RequiresSave() const override { return false; }
+};
+
+
+/**
+ * FBatchCreateMaterialInstancesAction
+ *
+ * Creates multiple Material Instances from a parent material in a single call.
+ * Single instance failures do not abort the batch.
+ *
+ * Parameters:
+ *   - parent_material (required): Name of the parent Material
+ *   - instances (required): Array of {name, path?, scalar_parameters?,
+ *                            vector_parameters?, texture_parameters?,
+ *                            static_switch_parameters?}
+ *
+ * Returns:
+ *   - created_count, failed_count,
+ *     results[]{name, path?, success, error?}
+ */
+class UEEDITORMCP_API FBatchCreateMaterialInstancesAction : public FMaterialAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
+	virtual FString GetActionName() const override { return TEXT("batch_create_material_instances"); }
+};
+
+
+/**
+ * FReplaceMaterialNodeAction
+ *
+ * Replaces an existing material expression node with a new one of a different
+ * type, migrating connections and constant values where possible, then
+ * recompiles the material to validate the result.
+ *
+ * Parameters:
+ *   - material_name (required): Name of the Material
+ *   - node_name (required): Name of the node to replace
+ *   - new_expression_class (required): Target expression type
+ *   - new_properties (optional): Object with property overrides for the new node
+ *
+ * Returns:
+ *   - replaced_node, new_node, new_expression_class,
+ *     migrated_connections[], failed_connections[], compile_result{}
+ */
+class UEEDITORMCP_API FReplaceMaterialNodeAction : public FMaterialAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
+	virtual FString GetActionName() const override { return TEXT("replace_material_node"); }
+};

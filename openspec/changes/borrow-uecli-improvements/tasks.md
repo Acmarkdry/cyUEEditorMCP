@@ -69,7 +69,7 @@
 
 ## 9. 文档更新
 
-- [ ] 9.1 重写 `README.md`：更新工具数量（10 个）、action 数量（~95 个）、新增 ue_python_exec / ue_async_run / Commandlet 模式说明、架构图更新
-- [ ] 9.2 更新 `docs/architecture.md`：新增 Python exec 路径和异步路径到架构图、新增 Commandlet 模式段落、更新关键文件表
-- [ ] 9.3 更新 `docs/actions.md`：移除已删除 action 条目，新增 python.exec，更新域统计数量
-- [ ] 9.4 更新 `docs/development.md`：新增 "使用 ue_python_exec 代替 C++ Action" 开发指南、新增 Commandlet 使用说明
+- [x] 9.1 重写 `README.md`：更新工具数量（10 个）、action 数量（~95 个）、新增 ue_python_exec / ue_async_run / Commandlet 模式说明、架构图更新
+- [x] 9.2 更新 `docs/architecture.md`：新增 Python exec 路径和异步路径到架构图、新增 Commandlet 模式段落、更新关键文件表
+- [x] 9.3 更新 `docs/actions.md`：移除已删除 action 条目，新增 python.exec，更新域统计数量
+- [x] 9.4 更新 `docs/development.md`：新增 "使用 ue_python_exec 代替 C++ Action" 开发指南、新增 Commandlet 使用说明

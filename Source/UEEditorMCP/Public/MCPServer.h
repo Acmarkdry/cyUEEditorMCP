@@ -49,6 +49,12 @@ private:
 	/** Handle get_context command (no game thread needed) */
 	FString HandleGetContext();
 
+	/** Handle async_execute command (no game thread blocking) */
+	FString HandleAsyncExecute(const TSharedPtr<FJsonObject>& JsonObj);
+
+	/** Handle get_task_result command (no game thread blocking) */
+	FString HandleGetTaskResult(const TSharedPtr<FJsonObject>& JsonObj);
+
 	/** Execute command on game thread and get response */
 	FString ExecuteOnGameThread(const FString& CommandType, TSharedPtr<FJsonObject> Params);
 

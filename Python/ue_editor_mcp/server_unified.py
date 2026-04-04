@@ -1,23 +1,28 @@
 """
-Unified MCP Server — single server with exactly 8 fixed tools.
+Unified MCP Server — single server with exactly 10 fixed tools.
 
 Replaces 6 separate servers (ue-editor, ue-blueprint, ue-bp-nodes,
 ue-bp-graph, ue-materials, ue-umg) with one ``ue-editor-mcp`` server that
 exposes:
-    1. ue_ping           — connection health check
-    2. ue_actions_search — find actions by keyword / tags
-    3. ue_actions_schema — get full schema for an action
-    4. ue_actions_run    — execute a single action
-    5. ue_batch          — execute multiple actions atomically
-    6. ue_resources_read — read embedded documentation
-    7. ue_logs_tail      — tail recent command log
-    8. ue_skills         — on-demand skill catalog (list / load)
+     1. ue_ping           — connection health check
+     2. ue_actions_search — find actions by keyword / tags
+     3. ue_actions_schema — get full schema for an action
+     4. ue_actions_run    — execute a single action
+     5. ue_batch          — execute multiple actions atomically
+     6. ue_resources_read — read embedded documentation
+     7. ue_logs_tail      — tail recent command log
+     8. ue_skills         — on-demand skill catalog (list / load)
+     9. ue_python_exec    — execute Python code in UE embedded Python
+    10. ue_async_run      — submit/poll async commands
 
 AI workflow (skill-based, preferred):
     ue_skills(list) → ue_skills(load, skill_id) → ue_actions_run / ue_batch
 
 AI workflow (legacy search-based):
     ue_actions_search → ue_actions_schema → ue_actions_run
+
+AI workflow (Python exec):
+    ue_python_exec(code="import unreal; _result = ...") → direct UE Python API
 """
 
 from __future__ import annotations
@@ -356,6 +361,68 @@ TOOLS = [
             "required": ["action"],
         },
     ),
+    Tool(
+        name="ue_python_exec",
+        description=(
+            "Execute Python code directly in Unreal Engine's embedded Python environment. "
+            "Use `import unreal` to access the full UE Python API. "
+            "Set `_result = <value>` in your code to return data to the caller. "
+            "Captures stdout, stderr, and the _result variable. "
+            "This replaces many individual actions — use unreal.EditorLevelLibrary, "
+            "unreal.EditorAssetLibrary, etc. for actor/asset/material operations."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "description": (
+                        "Python code to execute in Unreal's embedded Python environment. "
+                        "Use `import unreal` to access UE API. "
+                        "Set `_result = ...` to return data."
+                    ),
+                },
+                "timeout_seconds": {
+                    "type": "integer",
+                    "description": "Max execution time in seconds (default: 30, max: 240)",
+                },
+            },
+            "required": ["code"],
+        },
+    ),
+    Tool(
+        name="ue_async_run",
+        description=(
+            "Submit a command for async execution or poll for its result. "
+            "Use action='submit' to start a long-running command without blocking. "
+            "Use action='poll' with a task_id to check if it's done and get the result. "
+            "Useful for compile_blueprint, batch operations, and other slow commands."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["submit", "poll"],
+                    "description": "'submit' = start async command, 'poll' = check task result",
+                },
+                "action_id": {
+                    "type": "string",
+                    "description": "Action ID to execute (required for submit). Uses the same IDs as ue_actions_run.",
+                },
+                "params": {
+                    "type": "object",
+                    "additionalProperties": True,
+                    "description": "Action parameters (for submit)",
+                },
+                "task_id": {
+                    "type": "string",
+                    "description": "Task ID to poll (required for poll). Returned by a previous submit call.",
+                },
+            },
+            "required": ["action"],
+        },
+    ),
 ]
 
 
@@ -614,6 +681,46 @@ def _handle_tool(name: str, args: dict) -> Any:
             return {"success": True, **skill_data}
 
         return {"success": False, "error": f"Unknown action: '{action}'. Use 'list' or 'load'."}
+
+    # ── 9. ue_python_exec ───────────────────────────────────────────
+    if name == "ue_python_exec":
+        code = args.get("code", "")
+        if not code:
+            return {"success": False, "error": "code is required"}
+        timeout = min(args.get("timeout_seconds", 30), 240)
+        t0 = time.perf_counter()
+        result = _send_command("exec_python", {"code": code})
+        elapsed = (time.perf_counter() - t0) * 1000
+        _log_command("python.exec", {"code_length": len(code)}, result, elapsed)
+        return result
+
+    # ── 10. ue_async_run ────────────────────────────────────────────
+    if name == "ue_async_run":
+        action = args.get("action", "")
+
+        if action == "submit":
+            action_id = args.get("action_id", "")
+            if not action_id:
+                return {"success": False, "error": "action_id is required for submit"}
+            params = args.get("params")
+            # Resolve action_id to C++ command
+            command, final_params, error = _resolve_action_to_cpp_command(action_id, params)
+            if error:
+                return {"success": False, "error": error}
+            result = _send_command("async_execute", {
+                "command": command,
+                "params": final_params or {},
+            })
+            return result
+
+        if action == "poll":
+            task_id = args.get("task_id", "")
+            if not task_id:
+                return {"success": False, "error": "task_id is required for poll"}
+            result = _send_command("get_task_result", {"task_id": task_id})
+            return result
+
+        return {"success": False, "error": f"Unknown action: '{action}'. Use 'submit' or 'poll'."}
 
     return {"success": False, "error": f"Unknown tool: {name}"}
 

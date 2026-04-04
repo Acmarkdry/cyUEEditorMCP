@@ -122,6 +122,19 @@ uint32 FMCPClientHandler::Run()
 			continue;
 		}
 
+		// Handle async commands (no game thread blocking)
+		if (CommandType == TEXT("async_execute"))
+		{
+			SendResponse(HandleAsyncExecute(JsonObj));
+			continue;
+		}
+
+		if (CommandType == TEXT("get_task_result"))
+		{
+			SendResponse(HandleGetTaskResult(JsonObj));
+			continue;
+		}
+
 		// Get params (optional)
 		TSharedPtr<FJsonObject> Params;
 		const TSharedPtr<FJsonObject>* ParamsPtr;
@@ -278,6 +291,91 @@ FString FMCPClientHandler::HandleGetContext()
 	FPlatformProcess::ReturnSynchEventToPool(DoneEvent);
 
 	return Result;
+}
+
+FString FMCPClientHandler::HandleAsyncExecute(const TSharedPtr<FJsonObject>& JsonObj)
+{
+	if (!Bridge)
+	{
+		return TEXT("{\"status\":\"error\",\"success\":false,\"error\":\"Bridge not available\"}");
+	}
+
+	// Extract inner command and params
+	const TSharedPtr<FJsonObject>* ParamsPtr;
+	TSharedPtr<FJsonObject> Params;
+	if (JsonObj->TryGetObjectField(TEXT("params"), ParamsPtr))
+	{
+		Params = *ParamsPtr;
+	}
+
+	if (!Params.IsValid())
+	{
+		return TEXT("{\"status\":\"error\",\"success\":false,\"error\":\"Missing 'params' field in async_execute\"}");
+	}
+
+	FString InnerCommand;
+	if (!Params->TryGetStringField(TEXT("command"), InnerCommand) || InnerCommand.IsEmpty())
+	{
+		return TEXT("{\"status\":\"error\",\"success\":false,\"error\":\"Missing 'command' field in async_execute params\"}");
+	}
+
+	// Get inner params (optional)
+	TSharedPtr<FJsonObject> InnerParams;
+	const TSharedPtr<FJsonObject>* InnerParamsPtr;
+	if (Params->TryGetObjectField(TEXT("params"), InnerParamsPtr))
+	{
+		InnerParams = *InnerParamsPtr;
+	}
+	else
+	{
+		InnerParams = MakeShared<FJsonObject>();
+	}
+
+	// Submit async task (returns immediately)
+	FString TaskId = Bridge->SubmitAsyncTask(InnerCommand, InnerParams);
+
+	// Build response
+	FString Response = FString::Printf(
+		TEXT("{\"status\":\"success\",\"success\":true,\"result\":{\"task_id\":\"%s\",\"status\":\"submitted\"}}"),
+		*TaskId
+	);
+	return Response;
+}
+
+FString FMCPClientHandler::HandleGetTaskResult(const TSharedPtr<FJsonObject>& JsonObj)
+{
+	if (!Bridge)
+	{
+		return TEXT("{\"status\":\"error\",\"success\":false,\"error\":\"Bridge not available\"}");
+	}
+
+	// Extract task_id
+	const TSharedPtr<FJsonObject>* ParamsPtr;
+	TSharedPtr<FJsonObject> Params;
+	if (JsonObj->TryGetObjectField(TEXT("params"), ParamsPtr))
+	{
+		Params = *ParamsPtr;
+	}
+
+	if (!Params.IsValid())
+	{
+		return TEXT("{\"status\":\"error\",\"success\":false,\"error\":\"Missing 'params' field in get_task_result\"}");
+	}
+
+	FString TaskId;
+	if (!Params->TryGetStringField(TEXT("task_id"), TaskId) || TaskId.IsEmpty())
+	{
+		return TEXT("{\"status\":\"error\",\"success\":false,\"error\":\"Missing 'task_id' field in get_task_result params\"}");
+	}
+
+	// Get task result
+	TSharedPtr<FJsonObject> Result = Bridge->GetTaskResult(TaskId);
+
+	// Serialize to string
+	FString ResponseStr;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&ResponseStr);
+	FJsonSerializer::Serialize(Result.ToSharedRef(), Writer);
+	return ResponseStr;
 }
 
 FString FMCPClientHandler::ExecuteOnGameThread(const FString& CommandType, TSharedPtr<FJsonObject> Params)

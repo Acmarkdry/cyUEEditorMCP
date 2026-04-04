@@ -45,6 +45,7 @@ public class UEEditorMCP : ModuleRules
 			"FieldNotification",            // INotifyFieldValueChanged interface
 			"AnimGraph",                    // UAnimGraphNode_Base, state machine node types (Editor-only)
 			"AnimGraphRuntime",             // Runtime anim node type definitions (Editor-only module)
+			"PythonScriptPlugin",           // IPythonScriptPlugin for exec_python Action
 		});
 
 		// Ensure proper RTTI/exceptions for crash handling

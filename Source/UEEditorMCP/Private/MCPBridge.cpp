@@ -13,6 +13,8 @@
 #include "Actions/LayoutActions.h"
 #include "Actions/EditorDiffActions.h"
 #include "Actions/AnimGraphActions.h"
+#include "Actions/PythonActions.h"
+#include "Async/Async.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "Kismet/GameplayStatics.h"
@@ -67,44 +69,13 @@ void UMCPBridge::Deinitialize()
 void UMCPBridge::RegisterActions()
 {
 	// =========================================================================
-	// Blueprint Actions
+	// Editor Actions (retained: summary, logs, diagnostics, thumbnails)
 	// =========================================================================
-	ActionHandlers.Add(TEXT("create_blueprint"), MakeShared<FCreateBlueprintAction>());
-	ActionHandlers.Add(TEXT("compile_blueprint"), MakeShared<FCompileBlueprintAction>());
-	ActionHandlers.Add(TEXT("add_component_to_blueprint"), MakeShared<FAddComponentToBlueprintAction>());
-	ActionHandlers.Add(TEXT("spawn_blueprint_actor"), MakeShared<FSpawnBlueprintActorAction>());
-	ActionHandlers.Add(TEXT("set_component_property"), MakeShared<FSetComponentPropertyAction>());
-	ActionHandlers.Add(TEXT("set_static_mesh_properties"), MakeShared<FSetStaticMeshPropertiesAction>());
-	ActionHandlers.Add(TEXT("set_physics_properties"), MakeShared<FSetPhysicsPropertiesAction>());
-	ActionHandlers.Add(TEXT("set_blueprint_property"), MakeShared<FSetBlueprintPropertyAction>());
-	ActionHandlers.Add(TEXT("create_colored_material"), MakeShared<FCreateColoredMaterialAction>());
-	ActionHandlers.Add(TEXT("set_blueprint_parent_class"), MakeShared<FSetBlueprintParentClassAction>());
-	ActionHandlers.Add(TEXT("add_blueprint_interface"), MakeShared<FAddBlueprintInterfaceAction>());
-	ActionHandlers.Add(TEXT("remove_blueprint_interface"), MakeShared<FRemoveBlueprintInterfaceAction>());
-
-	// =========================================================================
-	// Editor Actions (actors, viewport, save)
-	// =========================================================================
-	ActionHandlers.Add(TEXT("get_actors_in_level"), MakeShared<FGetActorsInLevelAction>());
-	ActionHandlers.Add(TEXT("find_actors_by_name"), MakeShared<FFindActorsByNameAction>());
-	ActionHandlers.Add(TEXT("spawn_actor"), MakeShared<FSpawnActorAction>());
-	ActionHandlers.Add(TEXT("delete_actor"), MakeShared<FDeleteActorAction>());
-	ActionHandlers.Add(TEXT("set_actor_transform"), MakeShared<FSetActorTransformAction>());
-	ActionHandlers.Add(TEXT("get_actor_properties"), MakeShared<FGetActorPropertiesAction>());
-	ActionHandlers.Add(TEXT("set_actor_property"), MakeShared<FSetActorPropertyAction>());
-	ActionHandlers.Add(TEXT("focus_viewport"), MakeShared<FFocusViewportAction>());
-	ActionHandlers.Add(TEXT("get_viewport_transform"), MakeShared<FGetViewportTransformAction>());
-	ActionHandlers.Add(TEXT("set_viewport_transform"), MakeShared<FSetViewportTransformAction>());
-	ActionHandlers.Add(TEXT("save_all"), MakeShared<FSaveAllAction>());
-	ActionHandlers.Add(TEXT("list_assets"), MakeShared<FListAssetsAction>());
-	ActionHandlers.Add(TEXT("rename_assets"), MakeShared<FRenameAssetsAction>());
 	ActionHandlers.Add(TEXT("get_selected_asset_thumbnail"), MakeShared<FGetSelectedAssetThumbnailAction>());
-	ActionHandlers.Add(TEXT("get_selected_assets"), MakeShared<FGetSelectedAssetsAction>());
 	ActionHandlers.Add(TEXT("get_blueprint_summary"), MakeShared<FGetBlueprintSummaryAction>());
 	ActionHandlers.Add(TEXT("describe_blueprint_full"), MakeShared<FDescribeFullAction>());
 	ActionHandlers.Add(TEXT("get_editor_logs"), MakeShared<FGetEditorLogsAction>());
 	ActionHandlers.Add(TEXT("get_unreal_logs"), MakeShared<FGetUnrealLogsAction>());
-	ActionHandlers.Add(TEXT("batch_execute"), MakeShared<FBatchExecuteAction>());
 	ActionHandlers.Add(TEXT("is_ready"), MakeShared<FEditorIsReadyAction>());
 	ActionHandlers.Add(TEXT("request_shutdown"), MakeShared<FRequestEditorShutdownAction>());
 
@@ -290,26 +261,14 @@ void UMCPBridge::RegisterActions()
 	ActionHandlers.Add(TEXT("mvvm_remove_viewmodel"), MakeShared<FMVVMRemoveViewModelAction>());
 
 	// =========================================================================
-	// Material Actions (Materials, Shaders, Post-Process)
+	// Material Actions (retained: analysis, diagnostics, layout, summary)
 	// =========================================================================
-	ActionHandlers.Add(TEXT("create_material"), MakeShared<FCreateMaterialAction>());
 	ActionHandlers.Add(TEXT("set_material_property"), MakeShared<FSetMaterialPropertyAction>());
-	ActionHandlers.Add(TEXT("add_material_expression"), MakeShared<FAddMaterialExpressionAction>());
-	ActionHandlers.Add(TEXT("connect_material_expressions"), MakeShared<FConnectMaterialExpressionsAction>());
-	ActionHandlers.Add(TEXT("connect_to_material_output"), MakeShared<FConnectToMaterialOutputAction>());
-	ActionHandlers.Add(TEXT("set_material_expression_property"), MakeShared<FSetMaterialExpressionPropertyAction>());
-	ActionHandlers.Add(TEXT("compile_material"), MakeShared<FCompileMaterialAction>());
-	ActionHandlers.Add(TEXT("create_material_instance"), MakeShared<FCreateMaterialInstanceAction>());
-	ActionHandlers.Add(TEXT("create_post_process_volume"), MakeShared<FCreatePostProcessVolumeAction>());
-	// Phase 4 Material Actions
 	ActionHandlers.Add(TEXT("get_material_summary"), MakeShared<FGetMaterialSummaryAction>());
 	ActionHandlers.Add(TEXT("remove_material_expression"), MakeShared<FRemoveMaterialExpressionAction>());
 	ActionHandlers.Add(TEXT("auto_layout_material"), MakeShared<FAutoLayoutMaterialAction>());
 	ActionHandlers.Add(TEXT("auto_comment_material"), MakeShared<FAutoCommentMaterialAction>());
 	ActionHandlers.Add(TEXT("get_material_selected_nodes"), MakeShared<FGetMaterialSelectedNodesAction>());
-	// Phase 5 Material Actions
-	ActionHandlers.Add(TEXT("apply_material_to_component"), MakeShared<FApplyMaterialToComponentAction>());
-	ActionHandlers.Add(TEXT("apply_material_to_actor"), MakeShared<FApplyMaterialToActorAction>());
 	ActionHandlers.Add(TEXT("refresh_material_editor"), MakeShared<FRefreshMaterialEditorAction>());
 	ActionHandlers.Add(TEXT("analyze_material_complexity"),    MakeShared<FAnalyzeMaterialComplexityAction>());
 	ActionHandlers.Add(TEXT("analyze_material_dependencies"),  MakeShared<FAnalyzeMaterialDependenciesAction>());
@@ -326,30 +285,10 @@ void UMCPBridge::RegisterActions()
 	ActionHandlers.Add(TEXT("get_asset_history"), MakeShared<FGetAssetHistoryAction>());
 
 	// =========================================================================
-	// P6: PIE Control Actions
-	// =========================================================================
-	ActionHandlers.Add(TEXT("start_pie"), MakeShared<FStartPIEAction>());
-	ActionHandlers.Add(TEXT("stop_pie"), MakeShared<FStopPIEAction>());
-	ActionHandlers.Add(TEXT("get_pie_state"), MakeShared<FGetPIEStateAction>());
-
-	// =========================================================================
 	// P6: Log Enhancement Actions
 	// =========================================================================
 	ActionHandlers.Add(TEXT("clear_logs"), MakeShared<FClearLogsAction>());
 	ActionHandlers.Add(TEXT("assert_log"), MakeShared<FAssertLogAction>());
-
-	// =========================================================================
-	// P6: Outliner Management Actions
-	// =========================================================================
-	ActionHandlers.Add(TEXT("rename_actor_label"), MakeShared<FRenameActorLabelAction>());
-	ActionHandlers.Add(TEXT("set_actor_folder"), MakeShared<FSetActorFolderAction>());
-	ActionHandlers.Add(TEXT("select_actors"), MakeShared<FSelectActorsAction>());
-	ActionHandlers.Add(TEXT("get_outliner_tree"), MakeShared<FGetOutlinerTreeAction>());
-
-	// =========================================================================
-	// P7: Asset Editor Actions
-	// =========================================================================
-	ActionHandlers.Add(TEXT("open_asset_editor"), MakeShared<FOpenAssetEditorAction>());
 
 	// =========================================================================
 	// AnimGraph Actions (Animation Blueprint read/create/modify/compile)
@@ -372,6 +311,11 @@ void UMCPBridge::RegisterActions()
 	ActionHandlers.Add(TEXT("rename_animgraph_state"),       MakeShared<FRenameStateAction>());
 	ActionHandlers.Add(TEXT("set_transition_priority"),      MakeShared<FSetTransitionPriorityAction>());
 	ActionHandlers.Add(TEXT("compile_anim_blueprint"),       MakeShared<FCompileAnimBlueprintAction>());
+
+	// =========================================================================
+	// Python Execution Actions
+	// =========================================================================
+	ActionHandlers.Add(TEXT("exec_python"), MakeShared<FExecPythonAction>());
 
 	UE_LOG(LogMCP, Log, TEXT("UEEditorMCP: Registered %d action handlers"), ActionHandlers.Num());
 }
@@ -456,4 +400,136 @@ TSharedPtr<FJsonObject> UMCPBridge::CreateErrorResponse(const FString& ErrorMess
 	Response->SetStringField(TEXT("error_type"), ErrorType);
 
 	return Response;
+}
+
+// =========================================================================
+// Async Task Management
+// =========================================================================
+
+FString UMCPBridge::SubmitAsyncTask(const FString& CommandType, const TSharedPtr<FJsonObject>& Params)
+{
+	// Cleanup expired tasks opportunistically
+	CleanupExpiredTasks();
+
+	// Generate unique task ID
+	FString TaskId = FGuid::NewGuid().ToString();
+
+	// Register pending task
+	{
+		FScopeLock Lock(&AsyncTasksLock);
+		FAsyncTaskEntry Entry;
+		Entry.TaskId = TaskId;
+		Entry.Status = TEXT("pending");
+		AsyncTasks.Add(TaskId, Entry);
+	}
+
+	// Submit for game thread execution
+	// Capture by value to avoid dangling references
+	TWeakObjectPtr<UMCPBridge> WeakThis(this);
+	FString CapturedTaskId = TaskId;
+	FString CapturedCommand = CommandType;
+	TSharedPtr<FJsonObject> CapturedParams = Params;
+
+	AsyncTask(ENamedThreads::GameThread, [WeakThis, CapturedTaskId, CapturedCommand, CapturedParams]()
+	{
+		UMCPBridge* Bridge = WeakThis.Get();
+		if (!Bridge)
+		{
+			return;
+		}
+
+		TSharedPtr<FJsonObject> Result;
+		FString Status;
+
+		try
+		{
+			Result = Bridge->ExecuteCommandSafe(CapturedCommand, CapturedParams);
+			if (Result.IsValid() && Result->GetBoolField(TEXT("success")))
+			{
+				Status = TEXT("success");
+			}
+			else
+			{
+				Status = TEXT("error");
+			}
+		}
+		catch (...)
+		{
+			Status = TEXT("error");
+			Result = UMCPBridge::CreateErrorResponse(
+				TEXT("Unhandled exception during async execution"),
+				TEXT("cpp_exception")
+			);
+		}
+
+		// Write back result
+		FScopeLock Lock(&Bridge->AsyncTasksLock);
+		FAsyncTaskEntry* Entry = Bridge->AsyncTasks.Find(CapturedTaskId);
+		if (Entry)
+		{
+			Entry->Status = Status;
+			Entry->Result = Result;
+		}
+	});
+
+	return TaskId;
+}
+
+TSharedPtr<FJsonObject> UMCPBridge::GetTaskResult(const FString& TaskId)
+{
+	// Cleanup expired tasks opportunistically
+	CleanupExpiredTasks();
+
+	FScopeLock Lock(&AsyncTasksLock);
+
+	FAsyncTaskEntry* Entry = AsyncTasks.Find(TaskId);
+	if (!Entry)
+	{
+		return CreateErrorResponse(
+			FString::Printf(TEXT("Unknown or expired task_id: %s"), *TaskId),
+			TEXT("unknown_task")
+		);
+	}
+
+	if (Entry->Status == TEXT("pending"))
+	{
+		TSharedPtr<FJsonObject> ResultData = MakeShared<FJsonObject>();
+		ResultData->SetStringField(TEXT("task_id"), TaskId);
+		ResultData->SetStringField(TEXT("status"), TEXT("pending"));
+		return CreateSuccessResponse(ResultData);
+	}
+
+	// Task is complete - return result and remove entry
+	TSharedPtr<FJsonObject> Result = Entry->Result;
+	AsyncTasks.Remove(TaskId);
+
+	// Add task_id to the result for reference
+	if (Result.IsValid())
+	{
+		Result->SetStringField(TEXT("task_id"), TaskId);
+	}
+
+	return Result;
+}
+
+void UMCPBridge::CleanupExpiredTasks()
+{
+	FScopeLock Lock(&AsyncTasksLock);
+
+	double CurrentTime = FPlatformTime::Seconds();
+	TArray<FString> ExpiredKeys;
+
+	for (auto& Pair : AsyncTasks)
+	{
+		if (CurrentTime - Pair.Value.CreatedTime > AsyncTaskTTL)
+		{
+			ExpiredKeys.Add(Pair.Key);
+		}
+	}
+
+	for (const FString& Key : ExpiredKeys)
+	{
+		UE_LOG(LogMCP, Log, TEXT("UEEditorMCP: Cleaning up expired async task: %s"), *Key);
+		AsyncTasks.Remove(Key);
+	}
 }

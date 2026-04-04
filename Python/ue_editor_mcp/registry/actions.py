@@ -1,5 +1,5 @@
 """
-Action definitions — all 112 C++ actions registered with metadata.
+Action definitions — ~95 retained C++ actions + python.exec, registered with metadata.
 
 Each action maps:
   - A human-friendly ``id`` (e.g. "blueprint.create")
@@ -7,17 +7,57 @@ Each action maps:
   - With ``tags``, ``description``, ``input_schema``, and ``examples``
 
 Organized by domain for readability.
+
+Note: ~45 actions previously in _BLUEPRINT_ACTIONS, _COMPONENT_ACTIONS,
+_EDITOR_ACTIONS, and _MATERIAL_ACTIONS have been removed — their
+functionality is now provided by ue_python_exec via unreal.* Python API.
 """
 
 from __future__ import annotations
 from . import ActionDef, ActionRegistry
 
 
+# =========================================================================
+# Python Execution
+# =========================================================================
+_PYTHON_ACTIONS = [
+    ActionDef(
+        id="python.exec",
+        command="exec_python",
+        tags=("python", "exec", "script", "unreal"),
+        description=(
+            "Execute Python code in Unreal's embedded Python environment. "
+            "Use `import unreal` to access the full UE Python API. "
+            "Set `_result = <value>` to return data. "
+            "Replaces many former C++ actions — actor management, blueprint creation, "
+            "material operations, viewport control, PIE control, etc. can all be done "
+            "through unreal.* Python API."
+        ),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "description": (
+                        "Python code to execute. Use `import unreal` for UE API. "
+                        "Set `_result = ...` to return data."
+                    ),
+                },
+            },
+            "required": ["code"],
+        },
+        examples=(
+            {"code": "import unreal\n_result = [a.get_name() for a in unreal.EditorLevelLibrary.get_all_level_actors()]"},
+            {"code": "import unreal\nunreal.EditorLevelLibrary.spawn_actor_from_class(unreal.StaticMeshActor, unreal.Vector(0,0,0))"},
+            {"code": "import unreal\n_result = unreal.SystemLibrary.get_engine_version()"},
+        ),
+    ),
+]
+
+
 def register_all_actions(registry: ActionRegistry) -> None:
     """Register every action in the registry."""
-    registry.register_many(_BLUEPRINT_ACTIONS)
-    registry.register_many(_COMPONENT_ACTIONS)
-    registry.register_many(_EDITOR_ACTIONS)
+    # Retained domain-specific actions (Python API cannot replace these)
     registry.register_many(_LAYOUT_ACTIONS)
     registry.register_many(_NODE_EVENT_ACTIONS)
     registry.register_many(_NODE_DISPATCHER_ACTIONS)
@@ -33,6 +73,12 @@ def register_all_actions(registry: ActionRegistry) -> None:
     registry.register_many(_WIDGET_ACTIONS)
     registry.register_many(_INPUT_ACTIONS)
     registry.register_many(_ANIMGRAPH_ACTIONS)
+    # New: Python execution action
+    registry.register_many(_PYTHON_ACTIONS)
+    # Retained editor actions (summary, logs, diagnostics)
+    registry.register_many(_EDITOR_ACTIONS)
+    # Retained blueprint actions (get_summary, describe_full)
+    registry.register_many(_BLUEPRINT_ACTIONS)
 
 
 # =========================================================================

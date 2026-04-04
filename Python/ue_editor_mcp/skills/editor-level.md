@@ -1,22 +1,31 @@
 # Editor & Level Management — Workflow Tips
 
-## Actor Management
+## Actor Management (via ue_python_exec)
 
-```
-ue_batch(actions=[
-  {action_id: "editor.spawn_actor", params: {name: "MyLight", type: "PointLight", location: [0, 0, 200]}},
-  {action_id: "editor.set_actor_transform", params: {name: "MyLight", location: [100, 0, 200]}},
-  {action_id: "editor.set_actor_property", params: {name: "MyLight", property_name: "Intensity", property_value: "5000"}}
-])
+> **Note**: Actor spawning, transforms, properties, and outliner management
+> are now handled through `ue_python_exec`. See the `python-api` skill.
+
+```python
+# Spawn a point light and set its properties
+import unreal
+loc = unreal.Vector(100.0, 0.0, 200.0)
+actor = unreal.EditorLevelLibrary.spawn_actor_from_class(unreal.PointLight, loc)
+actor.point_light_component.set_editor_property("intensity", 5000.0)
+_result = actor.get_name()
 ```
 
-## PIE (Play In Editor) Control
+## PIE (Play In Editor) Control (via ue_python_exec)
 
+```python
+# Start PIE
+import unreal
+unreal.AutomationLibrary.start_pie()
 ```
-ue_actions_run(action_id="editor.start_pie", params={mode: "SelectedViewport"})
-# ... wait for gameplay ...
-ue_actions_run(action_id="editor.stop_pie")
-ue_actions_run(action_id="editor.get_pie_state")  # → {is_playing, is_paused, ...}
+
+```python
+# Stop PIE
+import unreal
+unreal.AutomationLibrary.end_play_map()
 ```
 
 ## Log-Based Testing
@@ -24,21 +33,22 @@ ue_actions_run(action_id="editor.get_pie_state")  # → {is_playing, is_paused, 
 ```
 ue_batch(actions=[
   {action_id: "editor.clear_logs"},
-  {action_id: "editor.start_pie", params: {mode: "SelectedViewport"}},
-  # ... wait ...
-  {action_id: "editor.stop_pie"},
+  // Start PIE via ue_python_exec, wait, then stop
   {action_id: "editor.assert_log", params: {pattern: "Player spawned", category: "LogGame", should_exist: true}}
 ])
 ```
 
-## Outliner Management
+## Outliner Management (via ue_python_exec)
 
-- `editor.rename_actor_label` — rename actor display name
-- `editor.set_actor_folder` — organize actors into folders
-- `editor.select_actors` — programmatic selection by name/class/folder
-- `editor.get_outliner_tree` — full hierarchy with folders
+```python
+# List all actors with folder info
+import unreal
+actors = unreal.EditorLevelLibrary.get_all_level_actors()
+_result = [{"name": a.get_name(), "class": a.get_class().get_name(),
+            "folder": a.get_folder_path().to_string()} for a in actors]
+```
 
-## Source Control Diff
+## Source Control Diff (retained C++ action)
 
 ```
 ue_actions_run(action_id="editor.diff_against_depot", params={
@@ -49,9 +59,9 @@ ue_actions_run(action_id="editor.diff_against_depot", params={
 
 ## Key Patterns
 
-- `editor.list_assets` with `class_filter` to find specific asset types
-- `editor.rename_assets` supports batch rename with automatic redirector fixup
+- Actor/viewport/PIE operations → use `ue_python_exec` with `import unreal`
 - `editor.get_selected_asset_thumbnail` returns PNG base64 for Content Browser selection
 - `editor.is_ready` to check if editor is fully initialized before operations
-- `batch.execute` is the C++ side batch — prefer `ue_batch` tool which wraps it
-- Position arrays: location=[X,Y,Z], rotation=[Pitch,Yaw,Roll], scale=[X,Y,Z]
+- `editor.get_logs` / `editor.clear_logs` / `editor.assert_log` for log inspection
+- `editor.diff_against_depot` and `editor.get_asset_history` for source control
+- For long-running operations, use `ue_async_run` with `action="submit"`

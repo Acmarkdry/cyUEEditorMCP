@@ -271,9 +271,37 @@ PYTHON_AGGREGATE_TOOLS = {
     "add_widget_component",   # UMG 聚合 tool
 }
 
-# 已知的 C++ 内部 action（不需要 Python 暴露）
+# 已知的 C++ 内部 action（不需要 Python 暴露 via tools/*.py）
 KNOWN_CPP_ONLY_ACTIONS: Set[str] = {
     "add_blueprint_get_subsystem_node",  # 内部使用
+    "exec_python",                       # exposed via server_unified.py, not tools/*.py
+    "async_execute",                     # fast-path in MCPServer, not a tool
+    "get_task_result",                   # fast-path in MCPServer, not a tool
+}
+
+# Actions removed from C++ MCPBridge (replaced by ue_python_exec).
+# Python tool modules in tools/*.py may still reference them — that's expected
+# since the tool modules haven't been updated yet; these are soft errors.
+_REMOVED_CPP_ACTIONS: Set[str] = {
+    "get_actors", "find_actors", "spawn_actor", "delete_actor",
+    "set_actor_transform", "get_actor_properties", "set_actor_property",
+    "focus_viewport", "get_viewport_info", "set_viewport_transform",
+    "save_all", "list_assets", "rename_assets", "get_selected_assets",
+    "rename_actor_label", "set_actor_folder", "select_actors",
+    "get_outliner_tree", "open_asset_editor",
+    "start_pie", "stop_pie", "get_pie_state",
+    "create_blueprint", "compile_blueprint", "set_blueprint_property",
+    "spawn_blueprint_actor", "set_parent_class",
+    "add_interface", "remove_interface", "add_component",
+    "create_colored_material",
+    "set_component_property", "set_static_mesh", "set_physics",
+    "create_material", "add_material_expression",
+    "connect_material_expressions", "connect_material_to_output",
+    "set_material_expression_property", "compile_material",
+    "create_material_instance",
+    "create_post_process_volume",
+    "apply_material_to_component", "apply_material_to_actor",
+    "batch_execute",
 }
 
 # blueprint_name 不算显式 required（通过基类 ValidateBlueprint 可选验证）
@@ -296,11 +324,19 @@ def run_checks(
             continue
         cmd = tool.handler_command or tool_name
         if cmd not in cpp_action_names:
-            issues.append(Issue(
-                "ERROR",
-                "MISSING_CPP_ACTION",
-                f"Python tool '{tool_name}' maps to C++ action '{cmd}' which is not registered in MCPBridge",
-            ))
+            # Downgrade to WARN if the action was intentionally removed
+            if cmd in _REMOVED_CPP_ACTIONS:
+                issues.append(Issue(
+                    "WARN",
+                    "REMOVED_CPP_ACTION",
+                    f"Python tool '{tool_name}' maps to removed C++ action '{cmd}' (use ue_python_exec instead)",
+                ))
+            else:
+                issues.append(Issue(
+                    "ERROR",
+                    "MISSING_CPP_ACTION",
+                    f"Python tool '{tool_name}' maps to C++ action '{cmd}' which is not registered in MCPBridge",
+                ))
 
     # --- Check 2: C++ action → Python tool 覆盖 ---
     for action_name in cpp_action_names:

@@ -75,8 +75,39 @@ def test_all_skill_action_ids_exist_in_registry():
     assert not missing, f"Actions referenced by skills but missing from registry: {missing}"
 
 
+# Actions whose C++ handlers were removed (replaced by ue_python_exec)
+# but whose ActionDefs still exist in registry for error-message clarity.
+_DEPRECATED_ACTION_IDS = {
+    "blueprint.create", "blueprint.compile", "blueprint.set_property",
+    "blueprint.spawn_actor", "blueprint.set_parent_class",
+    "blueprint.add_interface", "blueprint.remove_interface",
+    "blueprint.add_component", "blueprint.create_colored_material",
+    "component.set_property", "component.set_static_mesh",
+    "component.set_physics",
+    "editor.get_actors", "editor.find_actors",
+    "editor.spawn_actor", "editor.delete_actor",
+    "editor.set_actor_transform", "editor.get_actor_properties",
+    "editor.set_actor_property",
+    "editor.focus_viewport", "editor.get_viewport_transform",
+    "editor.set_viewport_transform",
+    "editor.save_all", "editor.list_assets",
+    "editor.rename_assets", "editor.get_selected_assets",
+    "editor.rename_actor_label", "editor.set_actor_folder",
+    "editor.select_actors", "editor.get_outliner_tree",
+    "editor.open_asset_editor",
+    "editor.start_pie", "editor.stop_pie", "editor.get_pie_state",
+    "material.create", "material.add_expression",
+    "material.connect_expressions", "material.connect_to_output",
+    "material.set_expression_property", "material.compile",
+    "material.create_instance",
+    "material.create_post_process_volume",
+    "material.apply_to_component", "material.apply_to_actor",
+    "batch.execute",
+}
+
+
 def test_all_registry_actions_covered_by_skills():
-    """Every action in the registry should be covered by at least one skill."""
+    """Every non-deprecated action in the registry should be covered by at least one skill."""
     registry = get_registry()
     all_skill_action_ids = set()
     for skill_def in SKILL_DEFS:
@@ -84,7 +115,7 @@ def test_all_registry_actions_covered_by_skills():
 
     uncovered = []
     for aid in registry.all_ids:
-        if aid not in all_skill_action_ids:
+        if aid not in all_skill_action_ids and aid not in _DEPRECATED_ACTION_IDS:
             uncovered.append(aid)
 
     assert not uncovered, f"Registry actions not covered by any skill: {uncovered}"

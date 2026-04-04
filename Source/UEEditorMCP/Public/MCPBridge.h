@@ -13,6 +13,23 @@ class FMCPServer;
 class FEditorAction;
 
 /**
+ * FAsyncTaskEntry
+ * Represents an async task submitted for execution on the game thread.
+ */
+struct FAsyncTaskEntry
+{
+	FString TaskId;
+	FString Status;  // "pending", "success", "error"
+	TSharedPtr<FJsonObject> Result;
+	double CreatedTime;
+
+	FAsyncTaskEntry()
+		: Status(TEXT("pending"))
+		, CreatedTime(FPlatformTime::Seconds())
+	{}
+};
+
+/**
  * UMCPBridge
  *
  * Editor subsystem that manages the MCP server and routes commands
@@ -71,6 +88,29 @@ public:
 	/** Create an error response */
 	static TSharedPtr<FJsonObject> CreateErrorResponse(const FString& ErrorMessage, const FString& ErrorType = TEXT("error"));
 
+	// =========================================================================
+	// Async Task Management
+	// =========================================================================
+
+	/**
+	 * Submit a command for async execution on the game thread.
+	 * Returns immediately with a task_id.
+	 */
+	FString SubmitAsyncTask(const FString& CommandType, const TSharedPtr<FJsonObject>& Params);
+
+	/**
+	 * Get the result of an async task.
+	 * Returns the result if complete, or a pending status.
+	 * Removes completed tasks from the map after retrieval.
+	 */
+	TSharedPtr<FJsonObject> GetTaskResult(const FString& TaskId);
+
+	/**
+	 * Clean up expired tasks (older than TTL).
+	 * Called automatically during Submit/Get operations.
+	 */
+	void CleanupExpiredTasks();
+
 private:
 	/** Register all action handlers */
 	void RegisterActions();
@@ -89,6 +129,13 @@ private:
 
 	/** Map of command types to action handlers */
 	TMap<FString, TSharedRef<FEditorAction>> ActionHandlers;
+
+	/** Async task storage (thread-safe) */
+	TMap<FString, FAsyncTaskEntry> AsyncTasks;
+	FCriticalSection AsyncTasksLock;
+
+	/** Async task TTL in seconds */
+	static constexpr double AsyncTaskTTL = 300.0;
 
 	/** Port to listen on (55558 during development to avoid conflict with old plugin) */
 	static constexpr int32 DefaultPort = 55558;

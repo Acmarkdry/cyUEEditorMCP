@@ -1,52 +1,54 @@
 # Material System — Workflow Tips
 
-## Full Material Creation Pipeline
+## Full Material Creation Pipeline (via ue_python_exec)
+
+> **Note**: Material creation, expression wiring, compilation, and application
+> are now handled through `ue_python_exec`. The retained C++ actions focus on
+> analysis, diagnostics, layout, and advanced editor operations.
+
+```python
+# Create a basic emissive material via Python
+import unreal
+factory = unreal.MaterialFactoryNew()
+asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+mat = asset_tools.create_asset("M_Glow", "/Game/Materials", None, factory)
+
+# For complex expression graphs, use the retained C++ actions:
+# material.get_summary, material.auto_layout, material.auto_comment
+_result = mat.get_path_name() if mat else "failed"
+```
+
+## Hybrid Workflow: Python + Retained C++ Actions
+
+The recommended workflow combines Python for creation/application with
+retained C++ actions for analysis, layout, and diagnostics:
 
 ```
-ue_batch(actions=[
-  {action_id: "material.create", params: {material_name: "M_Glow", domain: "Surface", blend_mode: "Translucent"}},
-  {action_id: "material.add_expression", params: {material_name: "M_Glow", expression_class: "VectorParameter", node_name: "color_param", properties: {ParameterName: "BaseColor", DefaultValue: "(R=0.0,G=0.5,B=1.0,A=1.0)"}}},
-  {action_id: "material.add_expression", params: {material_name: "M_Glow", expression_class: "ScalarParameter", node_name: "intensity", properties: {ParameterName: "Intensity", DefaultValue: "5.0"}}},
-  {action_id: "material.add_expression", params: {material_name: "M_Glow", expression_class: "Multiply", node_name: "mult"}},
-  {action_id: "material.connect_expressions", params: {material_name: "M_Glow", source_node: "color_param", target_node: "mult", target_input: "A"}},
-  {action_id: "material.connect_expressions", params: {material_name: "M_Glow", source_node: "intensity", target_node: "mult", target_input: "B"}},
-  {action_id: "material.connect_to_output", params: {material_name: "M_Glow", source_node: "mult", material_property: "EmissiveColor"}},
-  {action_id: "material.compile", params: {material_name: "M_Glow"}}
-])
+# Step 1: Create material via ue_python_exec
+# Step 2: Analyze with material.get_summary (C++ action)
+# Step 3: Auto-organize with material.auto_layout (C++ action)
+# Step 4: Diagnose issues with material.diagnose (C++ action)
+# Step 5: Apply to actor via ue_python_exec
 ```
 
-## Expression Types (~50 supported)
+## Retained C++ Actions
 
-**Parameters**: ScalarParameter, VectorParameter, TextureParameter, TextureSampleParameter2D, StaticSwitchParameter, StaticComponentMaskParameter
-**Constants**: Constant, Constant2Vector, Constant3Vector, Constant4Vector
-**Math**: Add, Subtract, Multiply, Divide, Power, Sqrt, Abs, Min, Max, Clamp, Saturate, Floor, Ceil, Frac, OneMinus, Step, SmoothStep
-**Trig**: Sin, Cos
-**Vector**: DotProduct, CrossProduct, Normalize, AppendVector, ComponentMask
-**Procedural**: Noise, Time, Panner
-**Scene**: SceneTexture, SceneDepth, ScreenPosition, TextureCoordinate, TextureSample, PixelDepth, WorldPosition, CameraPosition
-**Control**: If, Lerp
-**Derivative**: DDX, DDY
-**Custom**: Custom (HLSL code with dynamic inputs/outputs)
-**Function**: MaterialFunctionCall (reference UMaterialFunction assets)
-
-## Material Output Properties
-
-BaseColor, EmissiveColor, Metallic, Roughness, Specular, Normal,
-Opacity, OpacityMask, WorldPositionOffset, AmbientOcclusion, Refraction
-
-## Compile Diagnostics
-
-- `material.compile` waits for shader compilation and returns real `errors[]`
-- Each error includes: message, expression_name, expression_class, node_name
-- For additional context: `ue_logs_tail(source="editor", category="LogMaterial", min_verbosity="Error")`
-
-## Key Patterns
-
-- Use `material.get_summary` to inspect full graph structure before modifications
-- `material.auto_layout` after batch modifications to organize the graph
-- `material.refresh_editor` to update the open editor UI after programmatic changes
-- `material.create_instance` supports scalar/vector/texture/static_switch parameter overrides
-- `material.apply_to_actor` applies to ALL PrimitiveComponents on an actor
+| Action | Purpose |
+|---|---|
+| `material.get_summary` | Full graph structure inspection |
+| `material.set_property` | Set material domain/blend mode properties |
+| `material.remove_expression` | Remove expression nodes |
+| `material.auto_layout` | Organize graph layout after modifications |
+| `material.auto_comment` | Auto-generate comment boxes |
+| `material.refresh_editor` | Update open editor UI after programmatic changes |
+| `material.get_selected_nodes` | Query selected nodes in material editor |
+| `material.analyze_complexity` | Node count, shader instructions, texture samples |
+| `material.analyze_dependencies` | External asset dependencies |
+| `material.diagnose` | Common issue detection (orphan nodes, etc.) |
+| `material.diff` | Compare two materials structurally |
+| `material.extract_parameters` | Discover all parameters and defaults |
+| `material.batch_create_instances` | Create multiple instances in one call |
+| `material.replace_node` | Swap expression node while preserving connections |
 
 ## Material Analysis Workflow
 
@@ -54,19 +56,19 @@ Use the analysis actions to inspect and compare materials before making changes.
 
 ```
 # Check complexity and performance budget
-ue_call("analyze_material_complexity", {"material_name": "M_Character"})
+ue_actions_run(action_id="material.analyze_complexity", params={material_name: "M_Character"})
 # → node_count, node_type_distribution, connection_count, shader_instructions{vs, ps}, texture_samples[]
 
 # Inspect external dependencies (textures, material functions, level references)
-ue_call("analyze_material_dependencies", {"material_name": "M_Character"})
+ue_actions_run(action_id="material.analyze_dependencies", params={material_name: "M_Character"})
 # → external_assets[]{type, path, node_name}, level_references[]{actor_name, component_name}
 
 # Diagnose common issues (orphan nodes, excessive samples, domain/blend mode mismatches)
-ue_call("diagnose_material", {"material_name": "M_Character"})
+ue_actions_run(action_id="material.diagnose", params={material_name: "M_Character"})
 # → status("healthy"|"has_issues"), diagnostics[]{severity, code, message, node_name?}
 
 # Diff two materials to spot structural differences
-ue_call("diff_materials", {"material_name_a": "M_Base", "material_name_b": "M_Base_V2"})
+ue_actions_run(action_id="material.diff", params={material_name_a: "M_Base", material_name_b: "M_Base_V2"})
 # → summary{node_count_diff, connection_count_diff}, property_diffs[], parameters_only_in_a[], parameters_only_in_b[]
 ```
 
@@ -76,50 +78,37 @@ Extract parameters from a master material, then create multiple instances in one
 
 ```
 # Step 1 — discover all parameters and their defaults
-ue_call("extract_material_parameters", {"material_name": "M_Master"})
+ue_actions_run(action_id="material.extract_parameters", params={material_name: "M_Master"})
 # → parameters[]{name, type, default_value, group, sort_priority}
 
 # Step 2 — batch-create instances (failures are isolated; batch continues)
-ue_call("batch_create_material_instances", {
-    "parent_material": "M_Master",
-    "instances": [
-        {
-            "name": "MI_Red",
-            "path": "/Game/Materials/Instances",
-            "scalar_parameters": {"Roughness": 0.2, "Metallic": 0.0},
-            "vector_parameters": {"BaseColor": [1.0, 0.0, 0.0, 1.0]}
-        },
-        {
-            "name": "MI_Blue",
-            "scalar_parameters": {"Roughness": 0.5},
-            "vector_parameters": {"BaseColor": [0.0, 0.0, 1.0, 1.0]},
-            "texture_parameters": {"DetailMap": "/Game/Textures/T_Detail"}
-        },
-        {
-            "name": "MI_Metal",
-            "scalar_parameters": {"Roughness": 0.1, "Metallic": 1.0},
-            "static_switch_parameters": {"UseDetail": True}
-        }
+ue_actions_run(action_id="material.batch_create_instances", params={
+    parent_material: "M_Master",
+    instances: [
+        {name: "MI_Red", scalar_parameters: {Roughness: 0.2}, vector_parameters: {BaseColor: [1,0,0,1]}},
+        {name: "MI_Blue", scalar_parameters: {Roughness: 0.5}, vector_parameters: {BaseColor: [0,0,1,1]}}
     ]
 })
-# → created_count, failed_count, results[]{name, path?, success, error?}
 ```
 
-## Node Replacement Workflow
+## Applying Materials (via ue_python_exec)
 
-Swap an existing expression node for a different type while preserving connections.
-
+```python
+import unreal
+mat = unreal.load_asset("/Game/Materials/M_Glow")
+actors = unreal.GameplayStatics.get_all_actors_of_class(
+    unreal.EditorLevelLibrary.get_editor_world(), unreal.StaticMeshActor)
+for a in actors:
+    if a.get_name() == "MyMesh":
+        a.static_mesh_component.set_material(0, mat)
+        break
+_result = "applied"
 ```
-# Replace a Multiply node with a Lerp, keeping existing wired connections
-ue_call("replace_material_node", {
-    "material_name": "M_Glow",
-    "node_name": "blend_node",
-    "new_expression_class": "Lerp",
-    "new_properties": {"ConstAlpha": 0.5}
-})
-# → replaced_node, new_node, new_expression_class,
-#   migrated_connections[], failed_connections[], compile_result{}
 
-# After replacement, refresh the editor to see changes
-ue_call("refresh_material_editor", {"material_name": "M_Glow"})
-```
+## Key Patterns
+
+- Use `material.get_summary` to inspect full graph structure before modifications
+- `material.auto_layout` after batch modifications to organize the graph
+- `material.refresh_editor` to update the open editor UI after programmatic changes
+- For creating/compiling/applying materials → use `ue_python_exec`
+- For analysis/diagnostics/layout → use retained C++ actions

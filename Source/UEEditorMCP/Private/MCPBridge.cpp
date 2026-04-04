@@ -311,6 +311,13 @@ void UMCPBridge::RegisterActions()
 	ActionHandlers.Add(TEXT("apply_material_to_component"), MakeShared<FApplyMaterialToComponentAction>());
 	ActionHandlers.Add(TEXT("apply_material_to_actor"), MakeShared<FApplyMaterialToActorAction>());
 	ActionHandlers.Add(TEXT("refresh_material_editor"), MakeShared<FRefreshMaterialEditorAction>());
+	ActionHandlers.Add(TEXT("analyze_material_complexity"),    MakeShared<FAnalyzeMaterialComplexityAction>());
+	ActionHandlers.Add(TEXT("analyze_material_dependencies"),  MakeShared<FAnalyzeMaterialDependenciesAction>());
+	ActionHandlers.Add(TEXT("diagnose_material"),              MakeShared<FDiagnoseMaterialAction>());
+	ActionHandlers.Add(TEXT("diff_materials"),                 MakeShared<FDiffMaterialsAction>());
+	ActionHandlers.Add(TEXT("extract_material_parameters"),    MakeShared<FExtractMaterialParametersAction>());
+	ActionHandlers.Add(TEXT("batch_create_material_instances"),MakeShared<FBatchCreateMaterialInstancesAction>());
+	ActionHandlers.Add(TEXT("replace_material_node"),          MakeShared<FReplaceMaterialNodeAction>());
 
 	// =========================================================================
 	// Diff Actions (Source Control)

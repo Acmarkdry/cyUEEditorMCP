@@ -1,5 +1,5 @@
 """
-Unified MCP Server — single server with exactly 11 fixed tools.
+Unified MCP Server — single server with exactly 12 fixed tools.
 
 Replaces 6 separate servers (ue-editor, ue-blueprint, ue-bp-nodes,
 ue-bp-graph, ue-materials, ue-umg) with one ``ue-editor-mcp`` server that
@@ -13,8 +13,9 @@ exposes:
      7. ue_logs_tail      — tail recent command log
      8. ue_skills         — on-demand skill catalog (list / load)
      9. ue_python_exec    — execute Python code in UE embedded Python
-    10. ue_async_run      — submit/poll async commands
-    11. ue_context         — persistent context (resume/status/history/workset/clear)
+    10. ue_events          — subscribe/poll editor events (P9 event push)
+    11. ue_async_run      — submit/poll async commands
+    12. ue_context         — persistent context (resume/status/history/workset/clear)
 
 AI workflow (skill-based, preferred):
     ue_skills(list) → ue_skills(load, skill_id) → ue_actions_run / ue_batch
@@ -355,6 +356,14 @@ TOOLS = [
                     "type": "boolean",
                     "description": "If true, continue executing after a failure (default: false)",
                 },
+                "transactional": {
+                    "type": "boolean",
+                    "description": (
+                        "If true, wraps the entire batch in a single UE undo transaction. "
+                        "On any failure (with stop_on_error), ALL changes are automatically rolled back. "
+                        "Use this for atomic operations where partial completion is unacceptable. (default: false)"
+                    ),
+                },
             },
             "required": ["actions"],
         },
@@ -478,6 +487,37 @@ TOOLS = [
                 "limit": {
                     "type": "integer",
                     "description": "Number of history entries to return (default 20, max 100). Only used with action='history'.",
+                },
+            },
+            "required": ["action"],
+        },
+    ),
+    Tool(
+        name="ue_events",
+        description=(
+            "Subscribe to and poll editor events from Unreal Engine. "
+            "action='subscribe': start receiving events (optional event_types filter). "
+            "action='poll': get pending events since last poll. "
+            "action='unsubscribe': stop receiving events. "
+            "Event types: blueprint_compiled, asset_saved, asset_deleted, asset_renamed, "
+            "pie_started, pie_ended, level_changed, selection_changed, undo_performed."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["subscribe", "poll", "unsubscribe"],
+                    "description": "'subscribe' = start receiving events, 'poll' = get pending events, 'unsubscribe' = stop",
+                },
+                "event_types": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional filter: only receive these event types. Empty = all events.",
+                },
+                "max_events": {
+                    "type": "integer",
+                    "description": "Max events to return per poll (default: 50, max: 500)",
                 },
             },
             "required": ["action"],
@@ -745,12 +785,14 @@ def _handle_tool(name: str, args: dict) -> Any:
             cpp_commands.append({"type": command, "params": final_params or {}})
 
         # Phase 2: Single TCP round-trip via C++ batch_execute
+        transactional = args.get("transactional", False)
         t0 = time.perf_counter()
         result = _send_command(
             "batch_execute",
             {
                 "commands": cpp_commands,
                 "stop_on_error": not continue_on_error,
+                "transactional": transactional,
             },
         )
         elapsed = (time.perf_counter() - t0) * 1000
@@ -776,6 +818,8 @@ def _handle_tool(name: str, args: dict) -> Any:
             "total": result.get("total", len(actions)),
             "executed": result.get("executed", len(batch_results)),
             "failed": result.get("failed", 0),
+            "transactional": result.get("transactional", False),
+            "rolled_back": result.get("rolled_back", False),
             "results": batch_results,
         }
 
@@ -874,7 +918,31 @@ def _handle_tool(name: str, args: dict) -> Any:
         _log_command("python.exec", {"code_length": len(code)}, result, elapsed)
         return result
 
-    # ── 10. ue_async_run ────────────────────────────────────────────
+    # ── 10. ue_events (P9: Event Push) ──────────────────────────────
+    if name == "ue_events":
+        action = args.get("action", "")
+
+        if action == "subscribe":
+            event_types = args.get("event_types", [])
+            params = {"event_types": event_types} if event_types else {}
+            result = _send_command("subscribe_events", params or None)
+            return result
+
+        if action == "poll":
+            max_events = args.get("max_events", 50)
+            result = _send_command("poll_events", {"max_events": max_events})
+            return result
+
+        if action == "unsubscribe":
+            result = _send_command("unsubscribe_events")
+            return result
+
+        return {
+            "success": False,
+            "error": f"Unknown action: '{action}'. Use 'subscribe', 'poll', or 'unsubscribe'.",
+        }
+
+    # ── 11. ue_async_run ────────────────────────────────────────────
     if name == "ue_async_run":
         action = args.get("action", "")
 

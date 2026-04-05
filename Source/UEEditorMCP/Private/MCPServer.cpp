@@ -2,6 +2,7 @@
 
 #include "MCPServer.h"
 #include "MCPBridge.h"
+#include "MCPEventHub.h"
 #include "Actions/EditorAction.h"
 #include "Async/Async.h"
 #include "Serialization/JsonSerializer.h"
@@ -19,6 +20,7 @@ FMCPClientHandler::FMCPClientHandler(FSocket* InClientSocket, UMCPBridge* InBrid
 	, bServerStopping(InServerStopping)
 	, bShouldStop(false)
 	, bIsFinished(false)
+	, EventClientId(FMCPEventHub::AllocateClientId())
 {
 	// Start the handler thread
 	Thread = FRunnableThread::Create(this, TEXT("UEEditorMCP Client Handler"));
@@ -27,6 +29,12 @@ FMCPClientHandler::FMCPClientHandler(FSocket* InClientSocket, UMCPBridge* InBrid
 FMCPClientHandler::~FMCPClientHandler()
 {
 	bShouldStop = true;
+
+	// Unsubscribe from events on cleanup
+	if (Bridge)
+	{
+		Bridge->GetEventHub().Unsubscribe(EventClientId);
+	}
 
 	if (Thread)
 	{
@@ -132,6 +140,25 @@ uint32 FMCPClientHandler::Run()
 		if (CommandType == TEXT("get_task_result"))
 		{
 			SendResponse(HandleGetTaskResult(JsonObj));
+			continue;
+		}
+
+		// P9: Event push protocol commands (no game thread needed)
+		if (CommandType == TEXT("subscribe_events"))
+		{
+			SendResponse(HandleSubscribeEvents(JsonObj));
+			continue;
+		}
+
+		if (CommandType == TEXT("poll_events"))
+		{
+			SendResponse(HandlePollEvents(JsonObj));
+			continue;
+		}
+
+		if (CommandType == TEXT("unsubscribe_events"))
+		{
+			SendResponse(HandleUnsubscribeEvents());
 			continue;
 		}
 
@@ -376,6 +403,112 @@ FString FMCPClientHandler::HandleGetTaskResult(const TSharedPtr<FJsonObject>& Js
 	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&ResponseStr);
 	FJsonSerializer::Serialize(Result.ToSharedRef(), Writer);
 	return ResponseStr;
+}
+
+// ─── P9: Event Push Protocol ────────────────────────────────────────────────
+
+FString FMCPClientHandler::HandleSubscribeEvents(const TSharedPtr<FJsonObject>& JsonObj)
+{
+	if (!Bridge)
+	{
+		return TEXT("{\"status\":\"error\",\"success\":false,\"error\":\"Bridge not available\"}");
+	}
+
+	TArray<FString> EventTypes;
+
+	// Extract event types from params
+	const TSharedPtr<FJsonObject>* ParamsPtr;
+	if (JsonObj->TryGetObjectField(TEXT("params"), ParamsPtr))
+	{
+		const TArray<TSharedPtr<FJsonValue>>* TypesArray;
+		if ((*ParamsPtr)->TryGetArrayField(TEXT("event_types"), TypesArray))
+		{
+			for (const auto& Val : *TypesArray)
+			{
+				FString TypeStr;
+				if (Val->TryGetString(TypeStr))
+				{
+					EventTypes.Add(TypeStr);
+				}
+			}
+		}
+	}
+
+	Bridge->GetEventHub().Subscribe(EventClientId, EventTypes);
+
+	FString EventTypesStr = EventTypes.Num() > 0 ? FString::Join(EventTypes, TEXT(", ")) : TEXT("all");
+	return FString::Printf(
+		TEXT("{\"status\":\"success\",\"success\":true,\"result\":{\"subscribed\":true,\"client_id\":%d,\"event_types\":\"%s\"}}"),
+		EventClientId, *EventTypesStr
+	);
+}
+
+FString FMCPClientHandler::HandlePollEvents(const TSharedPtr<FJsonObject>& JsonObj)
+{
+	if (!Bridge)
+	{
+		return TEXT("{\"status\":\"error\",\"success\":false,\"error\":\"Bridge not available\"}");
+	}
+
+	int32 MaxEvents = 50;  // Default
+
+	const TSharedPtr<FJsonObject>* ParamsPtr;
+	if (JsonObj->TryGetObjectField(TEXT("params"), ParamsPtr))
+	{
+		double MaxVal = 0;
+		if ((*ParamsPtr)->TryGetNumberField(TEXT("max_events"), MaxVal))
+		{
+			MaxEvents = FMath::Clamp(static_cast<int32>(MaxVal), 1, 500);
+		}
+	}
+
+	TArray<FMCPEvent> Events = Bridge->GetEventHub().DrainEventsForClient(EventClientId);
+
+	// Build JSON array of events
+	TSharedPtr<FJsonObject> Response = MakeShared<FJsonObject>();
+	Response->SetStringField(TEXT("status"), TEXT("success"));
+	Response->SetBoolField(TEXT("success"), true);
+
+	TSharedPtr<FJsonObject> ResultObj = MakeShared<FJsonObject>();
+	ResultObj->SetNumberField(TEXT("count"), FMath::Min(Events.Num(), MaxEvents));
+	ResultObj->SetNumberField(TEXT("total_pending"), Events.Num());
+
+	TArray<TSharedPtr<FJsonValue>> EventArray;
+	int32 Count = 0;
+	for (const FMCPEvent& Evt : Events)
+	{
+		if (Count >= MaxEvents) break;
+
+		TSharedPtr<FJsonObject> EvtObj = MakeShared<FJsonObject>();
+		EvtObj->SetStringField(TEXT("event_type"), Evt.EventName);
+		EvtObj->SetNumberField(TEXT("timestamp"), Evt.Timestamp);
+		EvtObj->SetObjectField(TEXT("data"), Evt.Data.IsValid() ? Evt.Data : MakeShared<FJsonObject>());
+		EventArray.Add(MakeShared<FJsonValueObject>(EvtObj));
+		Count++;
+	}
+
+	ResultObj->SetArrayField(TEXT("events"), EventArray);
+	Response->SetObjectField(TEXT("result"), ResultObj);
+
+	FString ResponseStr;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&ResponseStr);
+	FJsonSerializer::Serialize(Response.ToSharedRef(), Writer);
+	return ResponseStr;
+}
+
+FString FMCPClientHandler::HandleUnsubscribeEvents()
+{
+	if (!Bridge)
+	{
+		return TEXT("{\"status\":\"error\",\"success\":false,\"error\":\"Bridge not available\"}");
+	}
+
+	Bridge->GetEventHub().Unsubscribe(EventClientId);
+
+	return FString::Printf(
+		TEXT("{\"status\":\"success\",\"success\":true,\"result\":{\"unsubscribed\":true,\"client_id\":%d}}"),
+		EventClientId
+	);
 }
 
 FString FMCPClientHandler::ExecuteOnGameThread(const FString& CommandType, TSharedPtr<FJsonObject> Params)

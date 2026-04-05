@@ -6,6 +6,7 @@
 #include "EditorSubsystem.h"
 #include "Dom/JsonObject.h"
 #include "MCPContext.h"
+#include "MCPEventHub.h"
 #include "MCPBridge.generated.h"
 
 // Forward declarations
@@ -139,4 +140,17 @@ private:
 
 	/** Port to listen on (55558 during development to avoid conflict with old plugin) */
 	static constexpr int32 DefaultPort = 55558;
+
+public:
+	// =========================================================================
+	// Event Hub Access (P9: Event Push System)
+	// =========================================================================
+
+	/** Get the event hub for event subscription and polling */
+	FMCPEventHub& GetEventHub() { return EventHub; }
+	const FMCPEventHub& GetEventHub() const { return EventHub; }
+
+private:
+	/** Event hub for editor event push (P9) */
+	FMCPEventHub EventHub;
 };

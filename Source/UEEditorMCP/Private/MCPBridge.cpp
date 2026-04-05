@@ -40,6 +40,9 @@ void UMCPBridge::Initialize(FSubsystemCollectionBase& Collection)
 	// Register action handlers
 	RegisterActions();
 
+	// Start the event hub (P9: Editor event push)
+	EventHub.StartListening();
+
 	// Start the TCP server
 	Server = new FMCPServer(this, DefaultPort);
 	if (Server->Start())
@@ -63,6 +66,9 @@ void UMCPBridge::Deinitialize()
 		delete Server;
 		Server = nullptr;
 	}
+
+	// Stop the event hub
+	EventHub.StopListening();
 
 	// Clear action handlers
 	ActionHandlers.Empty();

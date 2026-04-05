@@ -2238,6 +2238,7 @@ TSharedPtr<FJsonObject> FBatchExecuteAction::ExecuteInternal(const TSharedPtr<FJ
 {
 	const TArray<TSharedPtr<FJsonValue>>* Commands = GetOptionalArray(Params, TEXT("commands"));
 	const bool bStopOnError = GetOptionalBool(Params, TEXT("stop_on_error"), true);
+	const bool bTransactional = GetOptionalBool(Params, TEXT("transactional"), false);
 
 	// We need access to the Bridge to dispatch sub-commands
 	UMCPBridge* Bridge = GEditor ? GEditor->GetEditorSubsystem<UMCPBridge>() : nullptr;
@@ -2251,6 +2252,18 @@ TSharedPtr<FJsonObject> FBatchExecuteAction::ExecuteInternal(const TSharedPtr<FJ
 	int32 Succeeded = 0;
 	int32 Failed = 0;
 	int32 Executed = 0;
+	bool bRolledBack = false;
+
+	// P9: If transactional, wrap the entire batch in a single FScopedTransaction.
+	// On any failure (with stop_on_error), undo the entire transaction.
+	TUniquePtr<FScopedTransaction> ScopedTransaction;
+	if (bTransactional && GEditor)
+	{
+		ScopedTransaction = MakeUnique<FScopedTransaction>(
+			FText::FromString(FString::Printf(TEXT("MCP: batch_execute (%d commands)"), Total))
+		);
+		UE_LOG(LogMCP, Log, TEXT("Batch: transactional mode enabled — wrapping %d commands in single undo transaction"), Total);
+	}
 
 	for (int32 i = 0; i < Total; ++i)
 	{
@@ -2325,12 +2338,34 @@ TSharedPtr<FJsonObject> FBatchExecuteAction::ExecuteInternal(const TSharedPtr<FJ
 		}
 	}
 
+	// P9: Transactional rollback — if there were failures, cancel the transaction
+	// (undo all changes made by this batch) before it goes out of scope.
+	if (bTransactional && Failed > 0 && ScopedTransaction.IsValid())
+	{
+		// Cancel the scoped transaction by destroying it first (triggers undo record),
+		// then perform an undo to revert all changes.
+		ScopedTransaction.Reset();
+
+		if (GEditor && GEditor->Trans && GEditor->Trans->CanUndo())
+		{
+			GEditor->UndoTransaction();
+			bRolledBack = true;
+			UE_LOG(LogMCP, Warning, TEXT("Batch: transactional rollback — undid %d commands due to %d failure(s)"), Executed, Failed);
+		}
+		else
+		{
+			UE_LOG(LogMCP, Warning, TEXT("Batch: transactional rollback requested but undo not available"));
+		}
+	}
+
 	TSharedPtr<FJsonObject> ResultData = MakeShared<FJsonObject>();
 	ResultData->SetNumberField(TEXT("total"), Total);
 	ResultData->SetNumberField(TEXT("executed"), Executed);
 	ResultData->SetNumberField(TEXT("succeeded"), Succeeded);
 	ResultData->SetNumberField(TEXT("failed"), Failed);
 	ResultData->SetArrayField(TEXT("results"), ResultsArray);
+	ResultData->SetBoolField(TEXT("transactional"), bTransactional);
+	ResultData->SetBoolField(TEXT("rolled_back"), bRolledBack);
 
 	// The batch command itself always succeeds (it dispatched commands).
 	// Partial sub-command failures are conveyed via failed > 0 and individual

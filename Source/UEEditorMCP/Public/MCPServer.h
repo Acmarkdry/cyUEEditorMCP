@@ -55,6 +55,15 @@ private:
 	/** Handle get_task_result command (no game thread blocking) */
 	FString HandleGetTaskResult(const TSharedPtr<FJsonObject>& JsonObj);
 
+	/** Handle subscribe_events command (P9: Event Push) */
+	FString HandleSubscribeEvents(const TSharedPtr<FJsonObject>& JsonObj);
+
+	/** Handle poll_events command (P9: Event Push) */
+	FString HandlePollEvents(const TSharedPtr<FJsonObject>& JsonObj);
+
+	/** Handle unsubscribe_events command (P9: Event Push) */
+	FString HandleUnsubscribeEvents();
+
 	/** Execute command on game thread and get response */
 	FString ExecuteOnGameThread(const FString& CommandType, TSharedPtr<FJsonObject> Params);
 
@@ -64,6 +73,9 @@ private:
 	TAtomic<bool>& bServerStopping;
 	TAtomic<bool> bShouldStop;
 	TAtomic<bool> bIsFinished;
+
+	/** Unique client ID for event subscription (P9) */
+	int32 EventClientId;
 
 	/** Connection timeout in seconds (increased from 120s to accommodate
 	 *  long game-thread operations like blueprint compilation) */

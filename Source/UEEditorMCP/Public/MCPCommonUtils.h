@@ -121,6 +121,24 @@ public:
 	static bool ResolvePinTypeFromString(const FString& TypeName, FEdGraphPinType& OutPinType, FString& OutError);
 
 	// =========================================================================
+	// P7: Error Suggestion Helpers
+	// =========================================================================
+
+	/**
+	 * Collect all available pins on a node as a JSON array.
+	 * Used to provide suggestions when a pin name is not found.
+	 * Returns: [{name, direction, category, is_connected, default_value}]
+	 */
+	static TSharedPtr<FJsonObject> CollectAvailablePins(UEdGraphNode* Node);
+
+	/**
+	 * Search for assets with names similar to the given name.
+	 * Uses Asset Registry prefix search. Returns up to MaxResults paths.
+	 * Used to suggest corrections when an asset is not found.
+	 */
+	static TArray<FString> FindSimilarAssets(const FString& AssetName, int32 MaxResults = 5);
+
+	// =========================================================================
 	// Blueprint Editor Window Resolution
 	// =========================================================================
 

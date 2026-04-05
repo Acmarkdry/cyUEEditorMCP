@@ -639,3 +639,106 @@ protected:
 	virtual FString GetActionName() const override { return TEXT("open_asset_editor"); }
 	virtual bool RequiresSave() const override { return false; }
 };
+
+
+// =========================================================================
+// P7: Undo/Redo Actions
+// =========================================================================
+
+/**
+ * FUndoAction
+ * Undoes the last editor transaction (equivalent to Ctrl+Z).
+ * Action ID: editor.undo
+ */
+class UEEDITORMCP_API FUndoAction : public FEditorAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override { return true; }
+	virtual FString GetActionName() const override { return TEXT("undo"); }
+	virtual bool RequiresSave() const override { return false; }
+	virtual bool IsWriteAction() const override { return false; }
+};
+
+
+/**
+ * FRedoAction
+ * Redoes the last undone transaction (equivalent to Ctrl+Y).
+ * Action ID: editor.redo
+ */
+class UEEDITORMCP_API FRedoAction : public FEditorAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override { return true; }
+	virtual FString GetActionName() const override { return TEXT("redo"); }
+	virtual bool RequiresSave() const override { return false; }
+	virtual bool IsWriteAction() const override { return false; }
+};
+
+
+/**
+ * FGetUndoHistoryAction
+ * Returns the recent undo/redo history.
+ * Params: limit (int, default 20)
+ * Action ID: editor.get_undo_history
+ */
+class UEEDITORMCP_API FGetUndoHistoryAction : public FEditorAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override { return true; }
+	virtual FString GetActionName() const override { return TEXT("get_undo_history"); }
+	virtual bool RequiresSave() const override { return false; }
+};
+
+
+// =========================================================================
+// P7: Viewport Screenshot Actions
+// =========================================================================
+
+/**
+ * FTakeViewportScreenshotAction
+ * Captures the editor viewport as a PNG image and returns it as base64.
+ * Params:
+ *   width (int, default 512, max 1024)
+ *   height (int, default 512, max 1024)
+ * Action ID: editor.take_screenshot
+ */
+class UEEDITORMCP_API FTakeViewportScreenshotAction : public FEditorAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
+	virtual FString GetActionName() const override { return TEXT("take_screenshot"); }
+	virtual bool RequiresSave() const override { return false; }
+};
+
+
+/**
+ * FTakePIEScreenshotAction
+ * Captures the PIE (Play In Editor) game viewport as a PNG image.
+ * Only available when PIE is running.
+ * Params:
+ *   width (int, default 512, max 1024)
+ *   height (int, default 512, max 1024)
+ * Action ID: editor.take_pie_screenshot
+ */
+class UEEDITORMCP_API FTakePIEScreenshotAction : public FEditorAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
+	virtual FString GetActionName() const override { return TEXT("take_pie_screenshot"); }
+	virtual bool RequiresSave() const override { return false; }
+};

@@ -42,6 +42,14 @@
 		{
 			"Name": "PythonScriptPlugin",
 			"Enabled": true
+		},
+		{
+			"Name": "Niagara",
+			"Enabled": true
+		},
+		{
+			"Name": "LevelSequenceEditor",
+			"Enabled": true
 		}
 	]
 }

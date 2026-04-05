@@ -82,6 +82,14 @@ protected:
 	 */
 	virtual bool RequiresSave() const { return true; }
 
+	/**
+	 * Whether this action modifies editor state (write operation).
+	 * Write actions are automatically wrapped in FScopedTransaction for undo support.
+	 * By default, returns true if RequiresSave() is true (most write actions already
+	 * override RequiresSave). Override this for special cases.
+	 */
+	virtual bool IsWriteAction() const { return RequiresSave(); }
+
 	// =========================================================================
 	// Helper Methods
 	// =========================================================================
@@ -91,6 +99,13 @@ protected:
 
 	/** Create an error response */
 	TSharedPtr<FJsonObject> CreateErrorResponse(const FString& ErrorMessage, const FString& ErrorType = TEXT("error")) const;
+
+	/** Create an error response with suggestions for fixing the issue */
+	TSharedPtr<FJsonObject> CreateErrorResponseWithSuggestions(
+		const FString& ErrorMessage,
+		const FString& ErrorType,
+		const TArray<FString>& Suggestions,
+		const TSharedPtr<FJsonObject>& ContextData = nullptr) const;
 
 	/** Create a response indicating crash was prevented */
 	TSharedPtr<FJsonObject> CreateCrashPreventedResponse() const;

@@ -14,6 +14,10 @@
 #include "Actions/EditorDiffActions.h"
 #include "Actions/AnimGraphActions.h"
 #include "Actions/PythonActions.h"
+#include "Actions/NiagaraActions.h"
+#include "Actions/DataTableActions.h"
+#include "Actions/SequencerActions.h"
+#include "Actions/ExtendedActions.h"
 #include "Async/Async.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
@@ -316,6 +320,66 @@ void UMCPBridge::RegisterActions()
 	// Python Execution Actions
 	// =========================================================================
 	ActionHandlers.Add(TEXT("exec_python"), MakeShared<FExecPythonAction>());
+
+	// =========================================================================
+	// P7: Undo/Redo Actions
+	// =========================================================================
+	ActionHandlers.Add(TEXT("undo"), MakeShared<FUndoAction>());
+	ActionHandlers.Add(TEXT("redo"), MakeShared<FRedoAction>());
+	ActionHandlers.Add(TEXT("get_undo_history"), MakeShared<FGetUndoHistoryAction>());
+
+	// =========================================================================
+	// P7: Viewport Screenshot Actions
+	// =========================================================================
+	ActionHandlers.Add(TEXT("take_screenshot"), MakeShared<FTakeViewportScreenshotAction>());
+	ActionHandlers.Add(TEXT("take_pie_screenshot"), MakeShared<FTakePIEScreenshotAction>());
+
+	// =========================================================================
+	// P8: Niagara Particle System Actions
+	// =========================================================================
+	ActionHandlers.Add(TEXT("create_niagara_system"), MakeShared<FCreateNiagaraSystemAction>());
+	ActionHandlers.Add(TEXT("describe_niagara_system"), MakeShared<FDescribeNiagaraSystemAction>());
+	ActionHandlers.Add(TEXT("add_niagara_emitter"), MakeShared<FAddNiagaraEmitterAction>());
+	ActionHandlers.Add(TEXT("remove_niagara_emitter"), MakeShared<FRemoveNiagaraEmitterAction>());
+	ActionHandlers.Add(TEXT("set_niagara_module_param"), MakeShared<FSetNiagaraModuleParamAction>());
+	ActionHandlers.Add(TEXT("compile_niagara_system"), MakeShared<FCompileNiagaraSystemAction>());
+	ActionHandlers.Add(TEXT("get_niagara_modules"), MakeShared<FGetNiagaraModulesAction>());
+
+	// =========================================================================
+	// P8: DataTable Actions
+	// =========================================================================
+	ActionHandlers.Add(TEXT("create_datatable"), MakeShared<FCreateDataTableAction>());
+	ActionHandlers.Add(TEXT("describe_datatable"), MakeShared<FDescribeDataTableAction>());
+	ActionHandlers.Add(TEXT("add_datatable_row"), MakeShared<FAddDataTableRowAction>());
+	ActionHandlers.Add(TEXT("delete_datatable_row"), MakeShared<FDeleteDataTableRowAction>());
+	ActionHandlers.Add(TEXT("export_datatable_json"), MakeShared<FExportDataTableJsonAction>());
+
+	// =========================================================================
+	// P8: Sequencer Actions
+	// =========================================================================
+	ActionHandlers.Add(TEXT("create_level_sequence"), MakeShared<FCreateLevelSequenceAction>());
+	ActionHandlers.Add(TEXT("describe_level_sequence"), MakeShared<FDescribeLevelSequenceAction>());
+	ActionHandlers.Add(TEXT("add_sequencer_possessable"), MakeShared<FAddSequencerPossessableAction>());
+	ActionHandlers.Add(TEXT("add_sequencer_track"), MakeShared<FAddSequencerTrackAction>());
+	ActionHandlers.Add(TEXT("set_sequencer_range"), MakeShared<FSetSequencerRangeAction>());
+
+	// =========================================================================
+	// P10: Testing Actions
+	// =========================================================================
+	ActionHandlers.Add(TEXT("run_automation_test"), MakeShared<FRunAutomationTestAction>());
+	ActionHandlers.Add(TEXT("list_automation_tests"), MakeShared<FListAutomationTestsAction>());
+
+	// =========================================================================
+	// P10: Level Design Actions
+	// =========================================================================
+	ActionHandlers.Add(TEXT("list_sublevels"), MakeShared<FListSublevelsAction>());
+	ActionHandlers.Add(TEXT("get_world_settings"), MakeShared<FGetWorldSettingsAction>());
+
+	// =========================================================================
+	// P10: Profiler Actions
+	// =========================================================================
+	ActionHandlers.Add(TEXT("get_frame_stats"), MakeShared<FGetFrameStatsAction>());
+	ActionHandlers.Add(TEXT("get_memory_stats"), MakeShared<FGetMemoryStatsAction>());
 
 	UE_LOG(LogMCP, Log, TEXT("UEEditorMCP: Registered %d action handlers"), ActionHandlers.Num());
 }

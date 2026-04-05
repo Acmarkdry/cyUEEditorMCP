@@ -1,62 +1,132 @@
 #!/usr/bin/env python3
 """
-UE MCP Bridge CLI — 直接通过 TCP 调用 MCPBridge 命令，绕过 VS Code 工具槽位限制。
+UE MCP Bridge CLI — send commands to Unreal MCPBridge via TCP.
 
-用法:
+Usage:
     python ue_mcp_cli.py <command> [json_params]
+    python ue_mcp_cli.py --health
+    python ue_mcp_cli.py --stats
+    python ue_mcp_cli.py --batch <file.json>
 
-示例:
+Examples:
     python ue_mcp_cli.py ping
     python ue_mcp_cli.py save_all
     python ue_mcp_cli.py set_node_pin_default '{"blueprint_name":"BP_X","node_id":"GUID","pin_name":"InString","default_value":"Hello"}'
-    python ue_mcp_cli.py set_variable_metadata '{"blueprint_name":"BP_X","variable_name":"Health","category":"Stats","tooltip":"HP"}'
-    python ue_mcp_cli.py set_object_property '{"blueprint_name":"BP_X","owner_class":"PlayerController","property_name":"bShowMouseCursor"}'
+
+    # pipe params (recommended, avoids PowerShell escaping)
+    '{"blueprint_name":"BP_X"}' | python ue_mcp_cli.py compile_blueprint
+
+    # batch execution from file
+    python ue_mcp_cli.py --batch commands.json
+
+    # connection health check
+    python ue_mcp_cli.py --health
+
+    # performance metrics
+    python ue_mcp_cli.py --stats
 """
 
 import json
-import socket
+import os
 import sys
 from typing import Optional
 
-HOST = "127.0.0.1"
-PORT = 55558
-TIMEOUT = 30.0
+# Ensure the ue_editor_mcp package is importable
+_parent = os.path.dirname(os.path.abspath(__file__))
+if _parent not in sys.path:
+    sys.path.insert(0, _parent)
+
+from ue_editor_mcp.connection import (
+    PersistentUnrealConnection,
+    ConnectionConfig,
+    _wire_metrics,
+)
+from ue_editor_mcp.metrics import get_metrics
 
 
-def _recv_exact(sock: socket.socket, n: int) -> bytes:
-    """Receive exactly n bytes from socket."""
-    buf = bytearray()
-    while len(buf) < n:
-        chunk = sock.recv(n - len(buf))
-        if not chunk:
-            raise ConnectionError("Socket closed by remote")
-        buf.extend(chunk)
-    return bytes(buf)
+def _get_connection(timeout: Optional[float] = None) -> PersistentUnrealConnection:
+    """Create a connection with optional timeout override."""
+    config = ConnectionConfig()
+    if timeout is not None:
+        config.timeout = timeout
+    conn = PersistentUnrealConnection(config)
+    _wire_metrics(conn)
+    return conn
 
 
-def send_command(command_type: str, params: Optional[dict] = None) -> dict:
+def send_command(
+    command_type: str, params: Optional[dict] = None, *, timeout: Optional[float] = None
+) -> dict:
     """Send a single command to UE MCPBridge and return the response."""
-    command = {"type": command_type}
-    if params:
-        command["params"] = params
+    conn = _get_connection(timeout)
+    try:
+        if not conn.connect():
+            return {
+                "success": False,
+                "error": "Cannot connect to UE MCPBridge (port 55558). Is Unreal Editor running?",
+            }
+        return conn.send_raw_dict(command_type, params)
+    finally:
+        conn.disconnect()
 
-    payload = json.dumps(command).encode("utf-8")
 
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        sock.settimeout(TIMEOUT)
-        sock.connect((HOST, PORT))
+def _handle_health() -> None:
+    """Show connection health status."""
+    conn = _get_connection()
+    try:
+        connected = conn.connect()
+        health = conn.get_health()
+        if connected:
+            conn.ping()
+        health["ping_ok"] = connected
+        print(json.dumps(health, indent=2, ensure_ascii=False))
+    finally:
+        conn.disconnect()
 
-        # Send: 4-byte big-endian length prefix + JSON payload
-        sock.sendall(len(payload).to_bytes(4, byteorder="big"))
-        sock.sendall(payload)
 
-        # Receive: 4-byte length prefix
-        length_bytes = _recv_exact(sock, 4)
-        length = int.from_bytes(length_bytes, byteorder="big")
+def _handle_stats() -> None:
+    """Show performance metrics."""
+    conn = _get_connection()
+    try:
+        conn.connect()
+        conn.ping()  # at least one metric
+        summary = get_metrics().get_summary()
+        print(json.dumps(summary, indent=2, ensure_ascii=False))
+    finally:
+        conn.disconnect()
 
-        # Receive: message body
-        body = _recv_exact(sock, length)
-        return json.loads(body.decode("utf-8"))
+
+def _handle_batch(file_path: str) -> None:
+    """Execute commands from a JSON batch file.
+
+    Expected format:
+        [
+            {"type": "create_blueprint", "params": {"name": "BP_Test", "parent_class": "Actor"}},
+            {"type": "compile_blueprint", "params": {"blueprint_name": "BP_Test"}}
+        ]
+    """
+    if not os.path.isfile(file_path):
+        print(f"ERROR: Batch file not found: {file_path}", file=sys.stderr)
+        sys.exit(1)
+
+    with open(file_path, "r", encoding="utf-8") as f:
+        commands = json.load(f)
+
+    if not isinstance(commands, list):
+        print("ERROR: Batch file must contain a JSON array of commands", file=sys.stderr)
+        sys.exit(1)
+
+    conn = _get_connection()
+    try:
+        if not conn.connect():
+            print("ERROR: Cannot connect to UE MCPBridge", file=sys.stderr)
+            sys.exit(1)
+
+        batch_params = {"commands": commands, "continue_on_error": True}
+        result = conn.send_raw_dict("batch_execute", batch_params)
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+    finally:
+        conn.disconnect()
 
 
 def main():
@@ -64,19 +134,57 @@ def main():
         print(__doc__)
         sys.exit(1)
 
-    command_type = sys.argv[1]
+    arg1 = sys.argv[1]
+
+    # Special subcommands
+    if arg1 in ("--help", "-h"):
+        print(__doc__)
+        sys.exit(0)
+
+    if arg1 == "--health":
+        _handle_health()
+        return
+
+    if arg1 == "--stats":
+        _handle_stats()
+        return
+
+    if arg1 == "--batch":
+        if len(sys.argv) < 3:
+            print("ERROR: --batch requires a JSON file path", file=sys.stderr)
+            sys.exit(1)
+        _handle_batch(sys.argv[2])
+        return
+
+    # Parse optional --timeout
+    timeout = None
+    command_type = arg1
+    extra_args = sys.argv[2:]
+
+    if "--timeout" in sys.argv:
+        idx = sys.argv.index("--timeout")
+        if idx + 1 < len(sys.argv):
+            try:
+                timeout = float(sys.argv[idx + 1])
+            except ValueError:
+                print(f"ERROR: Invalid timeout value: {sys.argv[idx + 1]}", file=sys.stderr)
+                sys.exit(1)
+            # Remove --timeout and its value from extra_args
+            extra_args = [
+                a for i, a in enumerate(sys.argv[2:]) if i + 2 != idx and i + 2 != idx + 1
+            ]
+
     params = None
 
-    if len(sys.argv) >= 3:
-        # Join all remaining args (handles PowerShell splitting)
-        raw = " ".join(sys.argv[2:])
+    # Try joining remaining args as JSON
+    if extra_args:
+        raw = " ".join(extra_args)
         try:
             params = json.loads(raw)
         except json.JSONDecodeError:
-            # Fallback: try reading from stdin if arg parse fails
             pass
 
-    # If no params from args and stdin has data, read from stdin
+    # Fallback: read from stdin
     if params is None and not sys.stdin.isatty():
         try:
             raw_stdin = sys.stdin.read().strip()
@@ -87,7 +195,7 @@ def main():
             sys.exit(1)
 
     try:
-        result = send_command(command_type, params)
+        result = send_command(command_type, params, timeout=timeout)
         print(json.dumps(result, indent=2, ensure_ascii=False))
     except ConnectionRefusedError:
         print(

@@ -139,6 +139,7 @@ class TestResult(Enum):
 @dataclass
 class TestCase:
     """Single test case result."""
+
     name: str
     category: str
     result: TestResult = TestResult.SKIP
@@ -150,6 +151,7 @@ class TestCase:
 @dataclass
 class TestSuite:
     """Collection of test results."""
+
     cases: list[TestCase] = field(default_factory=list)
     start_time: float = 0.0
     end_time: float = 0.0
@@ -180,6 +182,7 @@ class TestSuite:
 
 
 # ─── Test helpers ───────────────────────────────────────────────────────────
+
 
 def _ok(resp: dict) -> bool:
     """Check if response indicates success."""
@@ -216,6 +219,7 @@ def _v_ok(r: dict) -> str:
 
 def _v_ok_or_expected_error(acceptable_errors: list[str]):
     """Validator that accepts success OR specific expected error messages."""
+
     def _validate(r: dict) -> str:
         if _ok(r):
             return ""
@@ -224,15 +228,18 @@ def _v_ok_or_expected_error(acceptable_errors: list[str]):
             if pattern.lower() in err.lower():
                 return ""  # Expected error is OK
         return f"Unexpected error: {err[:300]}"
+
     return _validate
 
 
 def _v_has(*fields):
     """Validator that checks result has certain fields."""
+
     def _validate(r: dict) -> str:
         res = _result(r)
         missing = [f for f in fields if f not in res]
         return f"Missing fields: {missing}" if missing else ""
+
     return _validate
 
 
@@ -256,7 +263,6 @@ ALL_TESTS: list[TestDef] = [
     # ═══════════════════════════════════════════════════════════════════════
     ("ping", "ping", "ping", None, _v_pong),
     ("get_context", "ping", "get_context", None, _v_any),
-
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY: editor — Editor state queries
     # ═══════════════════════════════════════════════════════════════════════
@@ -264,208 +270,380 @@ ALL_TESTS: list[TestDef] = [
     ("get_editor_logs", "editor", "get_editor_logs", {"count": 5}, _v_ok),
     ("get_unreal_logs", "editor", "get_unreal_logs", {"count": 5}, _v_ok),
     ("clear_logs", "editor", "clear_logs", None, _v_ok),
-    ("assert_log", "editor", "assert_log", {"category": "LogMCP", "pattern": ".*"}, _v_any),
-
+    (
+        "assert_log",
+        "editor",
+        "assert_log",
+        {"category": "LogMCP", "pattern": ".*"},
+        _v_any,
+    ),
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY: p7_undo — Undo/Redo/History
     # ═══════════════════════════════════════════════════════════════════════
     ("get_undo_history", "p7_undo", "get_undo_history", {"limit": 5}, _v_ok),
     ("undo", "p7_undo", "undo", None, _v_any),  # may fail if nothing to undo
     ("redo", "p7_undo", "redo", None, _v_any),  # may fail if nothing to redo
-
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY: p7_screenshot — Viewport Screenshot
     # ═══════════════════════════════════════════════════════════════════════
-    ("take_screenshot", "p7_screenshot", "take_screenshot", {"width": 256, "height": 256},
-     _v_ok_or_expected_error(["viewport", "commandlet", "not available"])),
-    ("take_pie_screenshot", "p7_screenshot", "take_pie_screenshot", {"width": 256},
-     _v_ok_or_expected_error(["PIE", "not running", "not available", "commandlet"])),
-
+    (
+        "take_screenshot",
+        "p7_screenshot",
+        "take_screenshot",
+        {"width": 256, "height": 256},
+        _v_ok_or_expected_error(["viewport", "commandlet", "not available"]),
+    ),
+    (
+        "take_pie_screenshot",
+        "p7_screenshot",
+        "take_pie_screenshot",
+        {"width": 256},
+        _v_ok_or_expected_error(["PIE", "not running", "not available", "commandlet"]),
+    ),
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY: editor_extra — Thumbnails, summaries
     # ═══════════════════════════════════════════════════════════════════════
-    ("get_selected_asset_thumbnail", "editor_extra", "get_selected_asset_thumbnail", None,
-     _v_ok_or_expected_error(["no asset", "no selection", "not found"])),
-
+    (
+        "get_selected_asset_thumbnail",
+        "editor_extra",
+        "get_selected_asset_thumbnail",
+        None,
+        _v_ok_or_expected_error(["no asset", "no selection", "not found"]),
+    ),
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY: layout — Auto-layout
     # ═══════════════════════════════════════════════════════════════════════
-    ("auto_layout_selected", "layout", "auto_layout_selected", None,
-     _v_ok_or_expected_error(["no blueprint", "no graph", "no selection", "not found"])),
-    ("auto_layout_subtree", "layout", "auto_layout_subtree", None,
-     _v_ok_or_expected_error(["no blueprint", "no graph", "no node", "not found"])),
-    ("auto_layout_blueprint", "layout", "auto_layout_blueprint", None,
-     _v_ok_or_expected_error(["no blueprint", "not found", "missing"])),
-    ("layout_and_comment", "layout", "layout_and_comment", None,
-     _v_ok_or_expected_error(["no blueprint", "not found", "missing"])),
-
+    (
+        "auto_layout_selected",
+        "layout",
+        "auto_layout_selected",
+        None,
+        _v_ok_or_expected_error(
+            ["no blueprint", "no graph", "no selection", "not found"]
+        ),
+    ),
+    (
+        "auto_layout_subtree",
+        "layout",
+        "auto_layout_subtree",
+        None,
+        _v_ok_or_expected_error(["no blueprint", "no graph", "no node", "not found"]),
+    ),
+    (
+        "auto_layout_blueprint",
+        "layout",
+        "auto_layout_blueprint",
+        None,
+        _v_ok_or_expected_error(["no blueprint", "not found", "missing"]),
+    ),
+    (
+        "layout_and_comment",
+        "layout",
+        "layout_and_comment",
+        None,
+        _v_ok_or_expected_error(["no blueprint", "not found", "missing"]),
+    ),
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY: node_query — Node read operations
     # ═══════════════════════════════════════════════════════════════════════
-    ("find_blueprint_nodes", "node_query", "find_blueprint_nodes",
-     {"search_term": "EventBeginPlay"},
-     _v_ok_or_expected_error(["no blueprint", "not found", "missing"])),
-    ("get_selected_nodes", "node_query", "get_selected_nodes", None,
-     _v_ok_or_expected_error(["no blueprint", "no graph", "not found"])),
-    ("describe_graph", "node_query", "describe_graph", None,
-     _v_ok_or_expected_error(["no blueprint", "no graph", "not found", "missing"])),
-    ("describe_graph_enhanced", "node_query", "describe_graph_enhanced", None,
-     _v_ok_or_expected_error(["no blueprint", "no graph", "not found", "missing"])),
-
+    (
+        "find_blueprint_nodes",
+        "node_query",
+        "find_blueprint_nodes",
+        {"search_term": "EventBeginPlay"},
+        _v_ok_or_expected_error(["no blueprint", "not found", "missing"]),
+    ),
+    (
+        "get_selected_nodes",
+        "node_query",
+        "get_selected_nodes",
+        None,
+        _v_ok_or_expected_error(["no blueprint", "no graph", "not found"]),
+    ),
+    (
+        "describe_graph",
+        "node_query",
+        "describe_graph",
+        None,
+        _v_ok_or_expected_error(["no blueprint", "no graph", "not found", "missing"]),
+    ),
+    (
+        "describe_graph_enhanced",
+        "node_query",
+        "describe_graph_enhanced",
+        None,
+        _v_ok_or_expected_error(["no blueprint", "no graph", "not found", "missing"]),
+    ),
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY: project — Project/Input actions
     # ═══════════════════════════════════════════════════════════════════════
-    ("create_input_action", "project", "create_input_action",
-     {"action_name": f"IA_Test_{_TS}", "value_type": "bool"},
-     _v_ok_or_expected_error(["already exists", "failed"])),
-    ("create_input_mapping_context", "project", "create_input_mapping_context",
-     {"context_name": f"IMC_Test_{_TS}"},
-     _v_ok_or_expected_error(["already exists", "failed"])),
-
+    (
+        "create_input_action",
+        "project",
+        "create_input_action",
+        {"action_name": f"IA_Test_{_TS}", "value_type": "bool"},
+        _v_ok_or_expected_error(["already exists", "failed"]),
+    ),
+    (
+        "create_input_mapping_context",
+        "project",
+        "create_input_mapping_context",
+        {"context_name": f"IMC_Test_{_TS}"},
+        _v_ok_or_expected_error(["already exists", "failed"]),
+    ),
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY: diff — Source control diff
     # ═══════════════════════════════════════════════════════════════════════
-    ("diff_against_depot", "diff", "diff_against_depot",
-     {"asset_path": "/Game/NonExistent"},
-     _v_ok_or_expected_error(["not found", "source control", "failed", "no source", "not connected"])),
-    ("get_asset_history", "diff", "get_asset_history",
-     {"asset_path": "/Game/NonExistent"},
-     _v_ok_or_expected_error(["not found", "source control", "failed", "no source", "not connected"])),
-
+    (
+        "diff_against_depot",
+        "diff",
+        "diff_against_depot",
+        {"asset_path": "/Game/NonExistent"},
+        _v_ok_or_expected_error(
+            ["not found", "source control", "failed", "no source", "not connected"]
+        ),
+    ),
+    (
+        "get_asset_history",
+        "diff",
+        "get_asset_history",
+        {"asset_path": "/Game/NonExistent"},
+        _v_ok_or_expected_error(
+            ["not found", "source control", "failed", "no source", "not connected"]
+        ),
+    ),
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY: python — Python execution
     # ═══════════════════════════════════════════════════════════════════════
-    ("exec_python_simple", "python", "exec_python",
-     {"code": "import unreal\n_result = unreal.SystemLibrary.get_engine_version()"},
-     _v_ok),
-    ("exec_python_actors", "python", "exec_python",
-     {"code": "import unreal\n_result = len(unreal.EditorLevelLibrary.get_all_level_actors())"},
-     _v_ok),
-
+    (
+        "exec_python_simple",
+        "python",
+        "exec_python",
+        {"code": "import unreal\n_result = unreal.SystemLibrary.get_engine_version()"},
+        _v_ok,
+    ),
+    (
+        "exec_python_actors",
+        "python",
+        "exec_python",
+        {
+            "code": "import unreal\n_result = len(unreal.EditorLevelLibrary.get_all_level_actors())"
+        },
+        _v_ok,
+    ),
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY: p8_niagara — Niagara Particle System
     # ═══════════════════════════════════════════════════════════════════════
-    ("create_niagara_system", "p8_niagara", "create_niagara_system",
-     {"system_name": f"NS_Test_{_TS}", "package_path": "/Game"},
-     _v_ok_or_expected_error(["already exists", "failed"])),
-    ("describe_niagara_system", "p8_niagara", "describe_niagara_system",
-     {"system_path": f"/Game/NS_Test_{_TS}"},
-     _v_ok_or_expected_error(["not found", "failed"])),
-    ("get_niagara_modules", "p8_niagara", "get_niagara_modules",
-     {"system_path": f"/Game/NS_Test_{_TS}"},
-     _v_ok_or_expected_error(["not found", "no emitters", "failed"])),
-    ("compile_niagara_system", "p8_niagara", "compile_niagara_system",
-     {"system_path": f"/Game/NS_Test_{_TS}"},
-     _v_ok_or_expected_error(["not found", "failed"])),
-
+    (
+        "create_niagara_system",
+        "p8_niagara",
+        "create_niagara_system",
+        {"system_name": f"NS_Test_{_TS}", "package_path": "/Game"},
+        _v_ok_or_expected_error(["already exists", "failed"]),
+    ),
+    (
+        "describe_niagara_system",
+        "p8_niagara",
+        "describe_niagara_system",
+        {"system_path": f"/Game/NS_Test_{_TS}"},
+        _v_ok_or_expected_error(["not found", "failed"]),
+    ),
+    (
+        "get_niagara_modules",
+        "p8_niagara",
+        "get_niagara_modules",
+        {"system_path": f"/Game/NS_Test_{_TS}"},
+        _v_ok_or_expected_error(["not found", "no emitters", "failed"]),
+    ),
+    (
+        "compile_niagara_system",
+        "p8_niagara",
+        "compile_niagara_system",
+        {"system_path": f"/Game/NS_Test_{_TS}"},
+        _v_ok_or_expected_error(["not found", "failed"]),
+    ),
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY: p8_datatable — DataTable
     # ═══════════════════════════════════════════════════════════════════════
-    ("create_datatable", "p8_datatable", "create_datatable",
-     {"table_name": f"DT_Test_{_TS}", "package_path": "/Game",
-      "row_struct": "/Script/Engine.DataTableRowHandle"},
-     _v_ok_or_expected_error(["already exists", "failed", "struct not found", "row struct"])),
-    ("describe_datatable", "p8_datatable", "describe_datatable",
-     {"table_path": f"/Game/DT_Test_{_TS}"},
-     _v_ok_or_expected_error(["not found", "failed"])),
-    ("export_datatable_json", "p8_datatable", "export_datatable_json",
-     {"table_path": f"/Game/DT_Test_{_TS}"},
-     _v_ok_or_expected_error(["not found", "failed"])),
-
+    (
+        "create_datatable",
+        "p8_datatable",
+        "create_datatable",
+        {
+            "table_name": f"DT_Test_{_TS}",
+            "package_path": "/Game",
+            "row_struct": "/Script/Engine.DataTableRowHandle",
+        },
+        _v_ok_or_expected_error(
+            ["already exists", "failed", "struct not found", "row struct"]
+        ),
+    ),
+    (
+        "describe_datatable",
+        "p8_datatable",
+        "describe_datatable",
+        {"table_path": f"/Game/DT_Test_{_TS}"},
+        _v_ok_or_expected_error(["not found", "failed"]),
+    ),
+    (
+        "export_datatable_json",
+        "p8_datatable",
+        "export_datatable_json",
+        {"table_path": f"/Game/DT_Test_{_TS}"},
+        _v_ok_or_expected_error(["not found", "failed"]),
+    ),
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY: p8_sequencer — Sequencer
     # ═══════════════════════════════════════════════════════════════════════
-    ("create_level_sequence", "p8_sequencer", "create_level_sequence",
-     {"sequence_name": f"LS_Test_{_TS}", "package_path": "/Game"},
-     _v_ok_or_expected_error(["already exists", "failed"])),
-    ("describe_level_sequence", "p8_sequencer", "describe_level_sequence",
-     {"sequence_path": f"/Game/LS_Test_{_TS}"},
-     _v_ok_or_expected_error(["not found", "failed"])),
-    ("set_sequencer_range", "p8_sequencer", "set_sequencer_range",
-     {"sequence_path": f"/Game/LS_Test_{_TS}", "start_frame": 0, "end_frame": 300},
-     _v_ok_or_expected_error(["not found", "failed"])),
-
+    (
+        "create_level_sequence",
+        "p8_sequencer",
+        "create_level_sequence",
+        {"sequence_name": f"LS_Test_{_TS}", "package_path": "/Game"},
+        _v_ok_or_expected_error(["already exists", "failed"]),
+    ),
+    (
+        "describe_level_sequence",
+        "p8_sequencer",
+        "describe_level_sequence",
+        {"sequence_path": f"/Game/LS_Test_{_TS}"},
+        _v_ok_or_expected_error(["not found", "failed"]),
+    ),
+    (
+        "set_sequencer_range",
+        "p8_sequencer",
+        "set_sequencer_range",
+        {"sequence_path": f"/Game/LS_Test_{_TS}", "start_frame": 0, "end_frame": 300},
+        _v_ok_or_expected_error(["not found", "failed"]),
+    ),
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY: p10_testing — Automation Testing
     # ═══════════════════════════════════════════════════════════════════════
-    ("list_automation_tests", "p10_testing", "list_automation_tests",
-     {"filter": "MCP"},
-     _v_ok),
-    ("run_automation_test", "p10_testing", "run_automation_test",
-     {"test_filter": "NonExistentTest"},
-     _v_ok_or_expected_error(["no tests", "not found", "failed"])),
-
+    (
+        "list_automation_tests",
+        "p10_testing",
+        "list_automation_tests",
+        {"filter": "MCP"},
+        _v_ok,
+    ),
+    (
+        "run_automation_test",
+        "p10_testing",
+        "run_automation_test",
+        {"test_filter": "NonExistentTest"},
+        _v_ok_or_expected_error(["no tests", "not found", "failed"]),
+    ),
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY: p10_level — Level Design
     # ═══════════════════════════════════════════════════════════════════════
     ("list_sublevels", "p10_level", "list_sublevels", None, _v_ok),
     ("get_world_settings", "p10_level", "get_world_settings", None, _v_ok),
-
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY: p10_profiler — Performance profiler
     # ═══════════════════════════════════════════════════════════════════════
     ("get_frame_stats", "p10_profiler", "get_frame_stats", None, _v_ok),
     ("get_memory_stats", "p10_profiler", "get_memory_stats", None, _v_ok),
-
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY: animgraph — Animation Blueprint (read-only queries)
     # ═══════════════════════════════════════════════════════════════════════
-    ("create_anim_blueprint", "animgraph", "create_anim_blueprint",
-     {"blueprint_name": f"ABP_Test_{_TS}", "package_path": "/Game",
-      "skeleton_path": ""},
-     _v_ok_or_expected_error(["skeleton", "not found", "failed", "invalid", "missing"])),
-
+    (
+        "create_anim_blueprint",
+        "animgraph",
+        "create_anim_blueprint",
+        {
+            "blueprint_name": f"ABP_Test_{_TS}",
+            "package_path": "/Game",
+            "skeleton_path": "",
+        },
+        _v_ok_or_expected_error(
+            ["skeleton", "not found", "failed", "invalid", "missing"]
+        ),
+    ),
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY: material — Material operations
     # ═══════════════════════════════════════════════════════════════════════
-    ("get_material_summary", "material", "get_material_summary",
-     {"material_path": "/Engine/BasicShapes/BasicShapeMaterial"},
-     _v_ok_or_expected_error(["not found", "failed"])),
-    ("analyze_material_complexity", "material", "analyze_material_complexity",
-     {"material_path": "/Engine/BasicShapes/BasicShapeMaterial"},
-     _v_ok_or_expected_error(["not found", "failed"])),
-    ("analyze_material_dependencies", "material", "analyze_material_dependencies",
-     {"material_path": "/Engine/BasicShapes/BasicShapeMaterial"},
-     _v_ok_or_expected_error(["not found", "failed"])),
-    ("diagnose_material", "material", "diagnose_material",
-     {"material_path": "/Engine/BasicShapes/BasicShapeMaterial"},
-     _v_ok_or_expected_error(["not found", "failed"])),
-    ("extract_material_parameters", "material", "extract_material_parameters",
-     {"material_path": "/Engine/BasicShapes/BasicShapeMaterial"},
-     _v_ok_or_expected_error(["not found", "failed"])),
-
+    (
+        "get_material_summary",
+        "material",
+        "get_material_summary",
+        {"material_path": "/Engine/BasicShapes/BasicShapeMaterial"},
+        _v_ok_or_expected_error(["not found", "failed"]),
+    ),
+    (
+        "analyze_material_complexity",
+        "material",
+        "analyze_material_complexity",
+        {"material_path": "/Engine/BasicShapes/BasicShapeMaterial"},
+        _v_ok_or_expected_error(["not found", "failed"]),
+    ),
+    (
+        "analyze_material_dependencies",
+        "material",
+        "analyze_material_dependencies",
+        {"material_path": "/Engine/BasicShapes/BasicShapeMaterial"},
+        _v_ok_or_expected_error(["not found", "failed"]),
+    ),
+    (
+        "diagnose_material",
+        "material",
+        "diagnose_material",
+        {"material_path": "/Engine/BasicShapes/BasicShapeMaterial"},
+        _v_ok_or_expected_error(["not found", "failed"]),
+    ),
+    (
+        "extract_material_parameters",
+        "material",
+        "extract_material_parameters",
+        {"material_path": "/Engine/BasicShapes/BasicShapeMaterial"},
+        _v_ok_or_expected_error(["not found", "failed"]),
+    ),
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY: batch — Batch execution
     # ═══════════════════════════════════════════════════════════════════════
-    ("batch_execute_mixed", "batch", "batch_execute",
-     {"commands": [
-         {"type": "is_ready", "params": {}},
-         {"type": "get_frame_stats", "params": {}},
-         {"type": "get_memory_stats", "params": {}},
-     ], "stop_on_error": False},
-     _v_ok_or_expected_error(["unknown", "failed"])),
-
+    (
+        "batch_execute_mixed",
+        "batch",
+        "batch_execute",
+        {
+            "commands": [
+                {"type": "is_ready", "params": {}},
+                {"type": "get_frame_stats", "params": {}},
+                {"type": "get_memory_stats", "params": {}},
+            ],
+            "stop_on_error": False,
+        },
+        _v_ok_or_expected_error(["unknown", "failed"]),
+    ),
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY: async — Async execution
     # ═══════════════════════════════════════════════════════════════════════
-    ("async_submit", "async", "async_execute",
-     {"command": "is_ready", "params": {}},
-     _v_has("task_id")),
-
+    (
+        "async_submit",
+        "async",
+        "async_execute",
+        {"command": "is_ready", "params": {}},
+        _v_has("task_id"),
+    ),
     # ═══════════════════════════════════════════════════════════════════════
     # CATEGORY: events — P9 Event Push System
     # ═══════════════════════════════════════════════════════════════════════
     ("subscribe_events_all", "events", "subscribe_events", None, _v_ok),
     ("poll_events_empty", "events", "poll_events", {"max_events": 10}, _v_ok),
     ("unsubscribe_events", "events", "unsubscribe_events", None, _v_ok),
-    ("subscribe_events_filtered", "events", "subscribe_events",
-     {"event_types": ["blueprint_compiled", "pie_started"]}, _v_ok),
+    (
+        "subscribe_events_filtered",
+        "events",
+        "subscribe_events",
+        {"event_types": ["blueprint_compiled", "pie_started"]},
+        _v_ok,
+    ),
     ("poll_events_after_filter", "events", "poll_events", {"max_events": 5}, _v_ok),
     ("unsubscribe_events_final", "events", "unsubscribe_events", None, _v_ok),
 ]
 
 
 # ─── Test runner ────────────────────────────────────────────────────────────
+
 
 def run_tests(
     conn: TestConnection,
@@ -531,7 +709,9 @@ def run_tests(
         print(f"  {status}  [{category:16s}] {name:40s} {timing}{msg_suffix}")
 
         if verbose and tc.response and tc.result == TestResult.FAIL:
-            print(f"           Response: {json.dumps(tc.response, ensure_ascii=False)[:500]}")
+            print(
+                f"           Response: {json.dumps(tc.response, ensure_ascii=False)[:500]}"
+            )
 
     suite.end_time = time.time()
     return suite
@@ -597,14 +777,19 @@ def list_categories():
 
 # ─── Main ───────────────────────────────────────────────────────────────────
 
+
 def main():
     parser = argparse.ArgumentParser(description="UEEditorMCP Runtime E2E Tests")
     parser.add_argument("-c", "--category", nargs="*", help="Run only these categories")
     parser.add_argument("--list", action="store_true", help="List available categories")
-    parser.add_argument("--dry-run", action="store_true", help="Show tests without running")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Show tests without running"
+    )
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
     parser.add_argument("--host", default=_HOST, help="UE host (default: 127.0.0.1)")
-    parser.add_argument("--port", type=int, default=_PORT, help="UE port (default: 55558)")
+    parser.add_argument(
+        "--port", type=int, default=_PORT, help="UE port (default: 55558)"
+    )
     args = parser.parse_args()
 
     if args.list:

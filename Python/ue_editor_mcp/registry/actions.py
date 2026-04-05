@@ -5914,57 +5914,121 @@ _UNDO_SCREENSHOT_ACTIONS = [
 # P8: Niagara Particle System Actions
 # =========================================================================
 _NIAGARA_ACTIONS = [
-    ActionDef(id="niagara.create_system", command="create_niagara_system",
-        tags=("niagara", "particle", "vfx", "create"), capabilities=("write",),
+    ActionDef(
+        id="niagara.create_system",
+        command="create_niagara_system",
+        tags=("niagara", "particle", "vfx", "create"),
+        capabilities=("write",),
         description="Create a new Niagara particle System asset.",
-        input_schema={"type": "object", "properties": {
-            "name": {"type": "string", "description": "System asset name"},
-            "path": {"type": "string", "description": "Package path (default: /Game/Effects)"},
-        }, "required": ["name"]},
-        examples=({"name": "NS_Fire"}, {"name": "NS_Rain", "path": "/Game/VFX"})),
-    ActionDef(id="niagara.describe_system", command="describe_niagara_system",
-        tags=("niagara", "particle", "vfx", "describe", "read"), capabilities=("read",),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "System asset name"},
+                "path": {
+                    "type": "string",
+                    "description": "Package path (default: /Game/Effects)",
+                },
+            },
+            "required": ["name"],
+        },
+        examples=({"name": "NS_Fire"}, {"name": "NS_Rain", "path": "/Game/VFX"}),
+    ),
+    ActionDef(
+        id="niagara.describe_system",
+        command="describe_niagara_system",
+        tags=("niagara", "particle", "vfx", "describe", "read"),
+        capabilities=("read",),
         description="Describe a Niagara System: emitters, modules, renderers, parameters.",
-        input_schema={"type": "object", "properties": {
-            "system_name": {"type": "string", "description": "Niagara System name"},
-        }, "required": ["system_name"]},
-        examples=({"system_name": "NS_Fire"},)),
-    ActionDef(id="niagara.add_emitter", command="add_niagara_emitter",
-        tags=("niagara", "particle", "emitter", "add"), capabilities=("write",),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "system_name": {"type": "string", "description": "Niagara System name"},
+            },
+            "required": ["system_name"],
+        },
+        examples=({"system_name": "NS_Fire"},),
+    ),
+    ActionDef(
+        id="niagara.add_emitter",
+        command="add_niagara_emitter",
+        tags=("niagara", "particle", "emitter", "add"),
+        capabilities=("write",),
         description="Add an emitter to a Niagara System.",
-        input_schema={"type": "object", "properties": {
-            "system_name": {"type": "string"}, "emitter_name": {"type": "string"},
-        }, "required": ["system_name", "emitter_name"]},
-        examples=({"system_name": "NS_Fire", "emitter_name": "Sparks"},)),
-    ActionDef(id="niagara.remove_emitter", command="remove_niagara_emitter",
-        tags=("niagara", "particle", "emitter", "remove"), capabilities=("write",), risk="moderate",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "system_name": {"type": "string"},
+                "emitter_name": {"type": "string"},
+            },
+            "required": ["system_name", "emitter_name"],
+        },
+        examples=({"system_name": "NS_Fire", "emitter_name": "Sparks"},),
+    ),
+    ActionDef(
+        id="niagara.remove_emitter",
+        command="remove_niagara_emitter",
+        tags=("niagara", "particle", "emitter", "remove"),
+        capabilities=("write",),
+        risk="moderate",
         description="Remove an emitter from a Niagara System by name.",
-        input_schema={"type": "object", "properties": {
-            "system_name": {"type": "string"}, "emitter_name": {"type": "string"},
-        }, "required": ["system_name", "emitter_name"]},
-        examples=({"system_name": "NS_Fire", "emitter_name": "Sparks"},)),
-    ActionDef(id="niagara.set_module_param", command="set_niagara_module_param",
-        tags=("niagara", "parameter", "set"), capabilities=("write",),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "system_name": {"type": "string"},
+                "emitter_name": {"type": "string"},
+            },
+            "required": ["system_name", "emitter_name"],
+        },
+        examples=({"system_name": "NS_Fire", "emitter_name": "Sparks"},),
+    ),
+    ActionDef(
+        id="niagara.set_module_param",
+        command="set_niagara_module_param",
+        tags=("niagara", "parameter", "set"),
+        capabilities=("write",),
         description="Set an exposed parameter on a Niagara System.",
-        input_schema={"type": "object", "properties": {
-            "system_name": {"type": "string"}, "parameter_name": {"type": "string"},
-            "value": {"description": "Parameter value (type depends on parameter)"},
-        }, "required": ["system_name", "parameter_name"]},
-        examples=({"system_name": "NS_Fire", "parameter_name": "SpawnRate", "value": 100},)),
-    ActionDef(id="niagara.compile", command="compile_niagara_system",
-        tags=("niagara", "compile"), capabilities=("write",),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "system_name": {"type": "string"},
+                "parameter_name": {"type": "string"},
+                "value": {"description": "Parameter value (type depends on parameter)"},
+            },
+            "required": ["system_name", "parameter_name"],
+        },
+        examples=(
+            {"system_name": "NS_Fire", "parameter_name": "SpawnRate", "value": 100},
+        ),
+    ),
+    ActionDef(
+        id="niagara.compile",
+        command="compile_niagara_system",
+        tags=("niagara", "compile"),
+        capabilities=("write",),
         description="Compile a Niagara System and return diagnostics.",
-        input_schema={"type": "object", "properties": {
-            "system_name": {"type": "string"},
-        }, "required": ["system_name"]},
-        examples=({"system_name": "NS_Fire"},)),
-    ActionDef(id="niagara.get_modules", command="get_niagara_modules",
-        tags=("niagara", "list", "templates"), capabilities=("read",),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "system_name": {"type": "string"},
+            },
+            "required": ["system_name"],
+        },
+        examples=({"system_name": "NS_Fire"},),
+    ),
+    ActionDef(
+        id="niagara.get_modules",
+        command="get_niagara_modules",
+        tags=("niagara", "list", "templates"),
+        capabilities=("read",),
         description="List available Niagara emitter templates.",
-        input_schema={"type": "object", "properties": {
-            "filter": {"type": "string", "description": "Optional name filter"},
-        }},
-        examples=({}, {"filter": "Fountain"})),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "filter": {"type": "string", "description": "Optional name filter"},
+            },
+        },
+        examples=({}, {"filter": "Fountain"}),
+    ),
 ]
 
 
@@ -5972,42 +6036,92 @@ _NIAGARA_ACTIONS = [
 # P8: DataTable Actions
 # =========================================================================
 _DATATABLE_ACTIONS = [
-    ActionDef(id="datatable.create", command="create_datatable",
-        tags=("datatable", "data", "create"), capabilities=("write",),
+    ActionDef(
+        id="datatable.create",
+        command="create_datatable",
+        tags=("datatable", "data", "create"),
+        capabilities=("write",),
         description="Create a new DataTable asset with a specified row struct.",
-        input_schema={"type": "object", "properties": {
-            "name": {"type": "string"}, "row_struct": {"type": "string", "description": "Row struct name e.g. FTableRowBase"},
-            "path": {"type": "string", "description": "Package path (default: /Game/Data)"},
-        }, "required": ["name", "row_struct"]},
-        examples=({"name": "DT_Items", "row_struct": "FTableRowBase"},)),
-    ActionDef(id="datatable.describe", command="describe_datatable",
-        tags=("datatable", "data", "describe", "read"), capabilities=("read",),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "row_struct": {
+                    "type": "string",
+                    "description": "Row struct name e.g. FTableRowBase",
+                },
+                "path": {
+                    "type": "string",
+                    "description": "Package path (default: /Game/Data)",
+                },
+            },
+            "required": ["name", "row_struct"],
+        },
+        examples=({"name": "DT_Items", "row_struct": "FTableRowBase"},),
+    ),
+    ActionDef(
+        id="datatable.describe",
+        command="describe_datatable",
+        tags=("datatable", "data", "describe", "read"),
+        capabilities=("read",),
         description="Describe a DataTable: row struct, fields, row names, count.",
-        input_schema={"type": "object", "properties": {
-            "table_name": {"type": "string"},
-        }, "required": ["table_name"]},
-        examples=({"table_name": "DT_Items"},)),
-    ActionDef(id="datatable.add_row", command="add_datatable_row",
-        tags=("datatable", "data", "row", "add"), capabilities=("write",),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "table_name": {"type": "string"},
+            },
+            "required": ["table_name"],
+        },
+        examples=({"table_name": "DT_Items"},),
+    ),
+    ActionDef(
+        id="datatable.add_row",
+        command="add_datatable_row",
+        tags=("datatable", "data", "row", "add"),
+        capabilities=("write",),
         description="Add a new row to a DataTable.",
-        input_schema={"type": "object", "properties": {
-            "table_name": {"type": "string"}, "row_name": {"type": "string"},
-        }, "required": ["table_name", "row_name"]},
-        examples=({"table_name": "DT_Items", "row_name": "Sword"},)),
-    ActionDef(id="datatable.delete_row", command="delete_datatable_row",
-        tags=("datatable", "data", "row", "delete"), capabilities=("write",), risk="moderate",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "table_name": {"type": "string"},
+                "row_name": {"type": "string"},
+            },
+            "required": ["table_name", "row_name"],
+        },
+        examples=({"table_name": "DT_Items", "row_name": "Sword"},),
+    ),
+    ActionDef(
+        id="datatable.delete_row",
+        command="delete_datatable_row",
+        tags=("datatable", "data", "row", "delete"),
+        capabilities=("write",),
+        risk="moderate",
         description="Delete a row from a DataTable by row name.",
-        input_schema={"type": "object", "properties": {
-            "table_name": {"type": "string"}, "row_name": {"type": "string"},
-        }, "required": ["table_name", "row_name"]},
-        examples=({"table_name": "DT_Items", "row_name": "Sword"},)),
-    ActionDef(id="datatable.export_json", command="export_datatable_json",
-        tags=("datatable", "data", "export", "json"), capabilities=("read",),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "table_name": {"type": "string"},
+                "row_name": {"type": "string"},
+            },
+            "required": ["table_name", "row_name"],
+        },
+        examples=({"table_name": "DT_Items", "row_name": "Sword"},),
+    ),
+    ActionDef(
+        id="datatable.export_json",
+        command="export_datatable_json",
+        tags=("datatable", "data", "export", "json"),
+        capabilities=("read",),
         description="Export a DataTable as JSON string.",
-        input_schema={"type": "object", "properties": {
-            "table_name": {"type": "string"},
-        }, "required": ["table_name"]},
-        examples=({"table_name": "DT_Items"},)),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "table_name": {"type": "string"},
+            },
+            "required": ["table_name"],
+        },
+        examples=({"table_name": "DT_Items"},),
+    ),
 ]
 
 
@@ -6015,45 +6129,102 @@ _DATATABLE_ACTIONS = [
 # P8: Sequencer Actions
 # =========================================================================
 _SEQUENCER_ACTIONS = [
-    ActionDef(id="sequencer.create", command="create_level_sequence",
-        tags=("sequencer", "cinematic", "create"), capabilities=("write",),
+    ActionDef(
+        id="sequencer.create",
+        command="create_level_sequence",
+        tags=("sequencer", "cinematic", "create"),
+        capabilities=("write",),
         description="Create a new LevelSequence asset for cinematics/animation.",
-        input_schema={"type": "object", "properties": {
-            "name": {"type": "string"}, "path": {"type": "string"},
-            "duration_seconds": {"type": "number", "description": "Default playback duration (default: 5.0)"},
-        }, "required": ["name"]},
-        examples=({"name": "LS_Intro"}, {"name": "LS_CutScene", "duration_seconds": 10.0})),
-    ActionDef(id="sequencer.describe", command="describe_level_sequence",
-        tags=("sequencer", "cinematic", "describe", "read"), capabilities=("read",),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "path": {"type": "string"},
+                "duration_seconds": {
+                    "type": "number",
+                    "description": "Default playback duration (default: 5.0)",
+                },
+            },
+            "required": ["name"],
+        },
+        examples=(
+            {"name": "LS_Intro"},
+            {"name": "LS_CutScene", "duration_seconds": 10.0},
+        ),
+    ),
+    ActionDef(
+        id="sequencer.describe",
+        command="describe_level_sequence",
+        tags=("sequencer", "cinematic", "describe", "read"),
+        capabilities=("read",),
         description="Describe a LevelSequence: bindings, tracks, range, frame rate.",
-        input_schema={"type": "object", "properties": {
-            "sequence_name": {"type": "string"},
-        }, "required": ["sequence_name"]},
-        examples=({"sequence_name": "LS_Intro"},)),
-    ActionDef(id="sequencer.add_possessable", command="add_sequencer_possessable",
-        tags=("sequencer", "binding", "actor", "add"), capabilities=("write",),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "sequence_name": {"type": "string"},
+            },
+            "required": ["sequence_name"],
+        },
+        examples=({"sequence_name": "LS_Intro"},),
+    ),
+    ActionDef(
+        id="sequencer.add_possessable",
+        command="add_sequencer_possessable",
+        tags=("sequencer", "binding", "actor", "add"),
+        capabilities=("write",),
         description="Bind a level actor to a sequence as a possessable.",
-        input_schema={"type": "object", "properties": {
-            "sequence_name": {"type": "string"}, "actor_name": {"type": "string"},
-        }, "required": ["sequence_name", "actor_name"]},
-        examples=({"sequence_name": "LS_Intro", "actor_name": "CameraActor_0"},)),
-    ActionDef(id="sequencer.add_track", command="add_sequencer_track",
-        tags=("sequencer", "track", "add"), capabilities=("write",),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "sequence_name": {"type": "string"},
+                "actor_name": {"type": "string"},
+            },
+            "required": ["sequence_name", "actor_name"],
+        },
+        examples=({"sequence_name": "LS_Intro", "actor_name": "CameraActor_0"},),
+    ),
+    ActionDef(
+        id="sequencer.add_track",
+        command="add_sequencer_track",
+        tags=("sequencer", "track", "add"),
+        capabilities=("write",),
         description="Add a track (Transform, Float, Bool, Visibility) to a sequence.",
-        input_schema={"type": "object", "properties": {
-            "sequence_name": {"type": "string"},
-            "track_type": {"type": "string", "enum": ["Transform", "Float", "Bool", "Visibility"]},
-            "binding_guid": {"type": "string", "description": "Optional: bind to a possessable GUID"},
-        }, "required": ["sequence_name", "track_type"]},
-        examples=({"sequence_name": "LS_Intro", "track_type": "Transform"},)),
-    ActionDef(id="sequencer.set_range", command="set_sequencer_range",
-        tags=("sequencer", "range", "set"), capabilities=("write",),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "sequence_name": {"type": "string"},
+                "track_type": {
+                    "type": "string",
+                    "enum": ["Transform", "Float", "Bool", "Visibility"],
+                },
+                "binding_guid": {
+                    "type": "string",
+                    "description": "Optional: bind to a possessable GUID",
+                },
+            },
+            "required": ["sequence_name", "track_type"],
+        },
+        examples=({"sequence_name": "LS_Intro", "track_type": "Transform"},),
+    ),
+    ActionDef(
+        id="sequencer.set_range",
+        command="set_sequencer_range",
+        tags=("sequencer", "range", "set"),
+        capabilities=("write",),
         description="Set the playback range of a sequence.",
-        input_schema={"type": "object", "properties": {
-            "sequence_name": {"type": "string"},
-            "start_seconds": {"type": "number"}, "end_seconds": {"type": "number"},
-        }, "required": ["sequence_name"]},
-        examples=({"sequence_name": "LS_Intro", "start_seconds": 0, "end_seconds": 10},)),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "sequence_name": {"type": "string"},
+                "start_seconds": {"type": "number"},
+                "end_seconds": {"type": "number"},
+            },
+            "required": ["sequence_name"],
+        },
+        examples=(
+            {"sequence_name": "LS_Intro", "start_seconds": 0, "end_seconds": 10},
+        ),
+    ),
 ]
 
 
@@ -6061,38 +6232,73 @@ _SEQUENCER_ACTIONS = [
 # P10: Extended Actions (Testing + Level + Profiler)
 # =========================================================================
 _EXTENDED_ACTIONS = [
-    ActionDef(id="test.run", command="run_automation_test",
-        tags=("test", "automation", "run", "qa"), capabilities=("read",),
+    ActionDef(
+        id="test.run",
+        command="run_automation_test",
+        tags=("test", "automation", "run", "qa"),
+        capabilities=("read",),
         description="Run UE automation tests matching a filter string.",
-        input_schema={"type": "object", "properties": {
-            "test_filter": {"type": "string", "description": "Filter string to match test names"},
-        }, "required": ["test_filter"]},
-        examples=({"test_filter": "Project.Functional"},)),
-    ActionDef(id="test.list", command="list_automation_tests",
-        tags=("test", "automation", "list"), capabilities=("read",),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "test_filter": {
+                    "type": "string",
+                    "description": "Filter string to match test names",
+                },
+            },
+            "required": ["test_filter"],
+        },
+        examples=({"test_filter": "Project.Functional"},),
+    ),
+    ActionDef(
+        id="test.list",
+        command="list_automation_tests",
+        tags=("test", "automation", "list"),
+        capabilities=("read",),
         description="List available automation tests, optionally filtered.",
-        input_schema={"type": "object", "properties": {
-            "filter": {"type": "string"}, "limit": {"type": "integer"},
-        }},
-        examples=({}, {"filter": "Editor", "limit": 20})),
-    ActionDef(id="level.list_sublevels", command="list_sublevels",
-        tags=("level", "sublevel", "streaming", "list"), capabilities=("read",),
+        input_schema={
+            "type": "object",
+            "properties": {
+                "filter": {"type": "string"},
+                "limit": {"type": "integer"},
+            },
+        },
+        examples=({}, {"filter": "Editor", "limit": 20}),
+    ),
+    ActionDef(
+        id="level.list_sublevels",
+        command="list_sublevels",
+        tags=("level", "sublevel", "streaming", "list"),
+        capabilities=("read",),
         description="List all streaming sublevels and their load/visibility status.",
         input_schema={"type": "object", "properties": {}},
-        examples=({},)),
-    ActionDef(id="level.get_world_settings", command="get_world_settings",
-        tags=("level", "world", "settings", "gamemode"), capabilities=("read",),
+        examples=({},),
+    ),
+    ActionDef(
+        id="level.get_world_settings",
+        command="get_world_settings",
+        tags=("level", "world", "settings", "gamemode"),
+        capabilities=("read",),
         description="Get current World Settings: gravity, KillZ, GameMode, lighting config.",
         input_schema={"type": "object", "properties": {}},
-        examples=({},)),
-    ActionDef(id="profiler.frame_stats", command="get_frame_stats",
-        tags=("profiler", "performance", "fps", "frame"), capabilities=("read",),
+        examples=({},),
+    ),
+    ActionDef(
+        id="profiler.frame_stats",
+        command="get_frame_stats",
+        tags=("profiler", "performance", "fps", "frame"),
+        capabilities=("read",),
         description="Get frame timing stats: average FPS, frame time, delta time, viewport size.",
         input_schema={"type": "object", "properties": {}},
-        examples=({},)),
-    ActionDef(id="profiler.memory_stats", command="get_memory_stats",
-        tags=("profiler", "performance", "memory", "ram"), capabilities=("read",),
+        examples=({},),
+    ),
+    ActionDef(
+        id="profiler.memory_stats",
+        command="get_memory_stats",
+        tags=("profiler", "performance", "memory", "ram"),
+        capabilities=("read",),
         description="Get memory statistics: physical/virtual memory usage, peak usage.",
         input_schema={"type": "object", "properties": {}},
-        examples=({},)),
+        examples=({},),
+    ),
 ]

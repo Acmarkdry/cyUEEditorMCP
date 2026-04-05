@@ -617,9 +617,7 @@ async def call_tool(
                 image_key = (mime_type, base64_data[:64])  # Use prefix for dedup
                 if image_key not in seen_images:
                     contents.append(
-                        ImageContent(
-                            type="image", data=base64_data, mimeType=mime_type
-                        )
+                        ImageContent(type="image", data=base64_data, mimeType=mime_type)
                     )
                     seen_images.add(image_key)
                     nonlocal image_blocks_count

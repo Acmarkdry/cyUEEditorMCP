@@ -192,7 +192,7 @@ SKILL_DEFS: list[SkillDef] = [
     SkillDef(
         id="editor-level",
         name="Editor & Level Management",
-        description="Editor diagnostics, logs, thumbnails, source control diff (actors/viewport/PIE via ue_python_exec)",
+        description="Editor diagnostics, logs, thumbnails, source control diff, undo/redo, screenshots, level info (actors/viewport/PIE via ue_python_exec)",
         action_ids=(
             "editor.get_selected_asset_thumbnail",
             "editor.diff_against_depot",
@@ -202,6 +202,16 @@ SKILL_DEFS: list[SkillDef] = [
             "editor.request_shutdown",
             "editor.clear_logs",
             "editor.assert_log",
+            # P7: Undo/Redo
+            "editor.undo",
+            "editor.redo",
+            "editor.get_undo_history",
+            # P7: Screenshots
+            "editor.take_screenshot",
+            "editor.take_pie_screenshot",
+            # P10: Level info
+            "level.list_sublevels",
+            "level.get_world_settings",
             "python.exec",
         ),
         workflows_file="editor-level.md",
@@ -256,6 +266,59 @@ SKILL_DEFS: list[SkillDef] = [
             "animgraph.compile",
         ),
         workflows_file="animgraph.md",
+    ),
+    SkillDef(
+        id="niagara",
+        name="Niagara Particle System",
+        description="Create, describe, modify, and compile Niagara particle systems — emitters, modules, parameters",
+        action_ids=(
+            "niagara.create_system",
+            "niagara.describe_system",
+            "niagara.add_emitter",
+            "niagara.remove_emitter",
+            "niagara.get_modules",
+            "niagara.set_module_param",
+            "niagara.compile",
+        ),
+        workflows_file="niagara.md",
+    ),
+    SkillDef(
+        id="datatable",
+        name="DataTable",
+        description="Create, describe, and manipulate DataTables — add/delete rows, export to JSON",
+        action_ids=(
+            "datatable.create",
+            "datatable.describe",
+            "datatable.add_row",
+            "datatable.delete_row",
+            "datatable.export_json",
+        ),
+        workflows_file="datatable.md",
+    ),
+    SkillDef(
+        id="sequencer",
+        name="Level Sequencer",
+        description="Create and edit Level Sequences — add possessable bindings, tracks, set playback range",
+        action_ids=(
+            "sequencer.create",
+            "sequencer.describe",
+            "sequencer.add_possessable",
+            "sequencer.add_track",
+            "sequencer.set_range",
+        ),
+        workflows_file="sequencer.md",
+    ),
+    SkillDef(
+        id="profiler-test",
+        name="Profiling & Automation Testing",
+        description="Frame/memory stats profiling and UE automation test runner",
+        action_ids=(
+            "profiler.frame_stats",
+            "profiler.memory_stats",
+            "test.list",
+            "test.run",
+        ),
+        workflows_file="profiler-test.md",
     ),
 ]
 

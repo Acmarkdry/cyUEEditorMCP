@@ -46,6 +46,14 @@ public class UEEditorMCP : ModuleRules
 			"AnimGraph",                    // UAnimGraphNode_Base, state machine node types (Editor-only)
 			"AnimGraphRuntime",             // Runtime anim node type definitions (Editor-only module)
 			"PythonScriptPlugin",           // IPythonScriptPlugin for exec_python Action
+			"ImageWrapper",                 // IImageWrapper for viewport screenshot PNG encoding
+			"Niagara",                      // P8: Niagara runtime types
+			"NiagaraEditor",                // P8: Niagara editor API (factory, module manipulation)
+			"NiagaraCore",                  // P8: Niagara core type definitions
+			"DataTableEditor",              // P8: DataTable editor utilities (AddRow, RemoveRow)
+			"LevelSequence",                // P8: LevelSequence asset type
+			"MovieScene",                   // P8: MovieScene tracks, sections, bindings
+			"MovieSceneTracks",             // P8: Concrete track types (Transform, Float, etc.)
 		});
 
 		// Ensure proper RTTI/exceptions for crash handling

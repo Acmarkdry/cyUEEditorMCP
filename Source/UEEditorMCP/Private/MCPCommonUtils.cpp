@@ -916,3 +916,140 @@ FBlueprintEditor* FMCPCommonUtils::GetActiveBlueprintEditor(const FString& Bluep
 		Candidates.Num());
 	return Candidates[0];
 }
+
+
+// =========================================================================
+// P7: Error Suggestion Helpers
+// =========================================================================
+
+TSharedPtr<FJsonObject> FMCPCommonUtils::CollectAvailablePins(UEdGraphNode* Node)
+{
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	if (!Node)
+	{
+		return Result;
+	}
+
+	TArray<TSharedPtr<FJsonValue>> PinsArray;
+	for (UEdGraphPin* Pin : Node->Pins)
+	{
+		if (!Pin || Pin->bHidden)
+		{
+			continue;
+		}
+
+		TSharedPtr<FJsonObject> PinObj = MakeShared<FJsonObject>();
+		PinObj->SetStringField(TEXT("name"), Pin->PinName.ToString());
+		PinObj->SetStringField(TEXT("direction"),
+			Pin->Direction == EGPD_Input ? TEXT("input") : TEXT("output"));
+		PinObj->SetStringField(TEXT("category"), Pin->PinType.PinCategory.ToString());
+		PinObj->SetBoolField(TEXT("is_connected"), Pin->LinkedTo.Num() > 0);
+
+		// Include sub-category if present (e.g. struct type)
+		if (!Pin->PinType.PinSubCategory.IsNone())
+		{
+			PinObj->SetStringField(TEXT("sub_category"), Pin->PinType.PinSubCategory.ToString());
+		}
+		if (Pin->PinType.PinSubCategoryObject.IsValid())
+		{
+			PinObj->SetStringField(TEXT("sub_type"), Pin->PinType.PinSubCategoryObject->GetName());
+		}
+
+		// Default value
+		if (!Pin->DefaultValue.IsEmpty())
+		{
+			PinObj->SetStringField(TEXT("default_value"), Pin->DefaultValue);
+		}
+
+		PinsArray.Add(MakeShared<FJsonValueObject>(PinObj));
+	}
+
+	Result->SetArrayField(TEXT("pins"), PinsArray);
+	Result->SetStringField(TEXT("node_class"), Node->GetClass()->GetName());
+	Result->SetStringField(TEXT("node_title"), Node->GetNodeTitle(ENodeTitleType::FullTitle).ToString());
+	Result->SetNumberField(TEXT("pin_count"), PinsArray.Num());
+
+	return Result;
+}
+
+
+TArray<FString> FMCPCommonUtils::FindSimilarAssets(const FString& AssetName, int32 MaxResults)
+{
+	TArray<FString> Results;
+
+	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+
+	// Strategy 1: Search by name substring
+	TArray<FAssetData> AllAssets;
+	FARFilter Filter;
+	Filter.PackagePaths.Add(FName(TEXT("/Game")));
+	Filter.bRecursivePaths = true;
+	AssetRegistry.GetAssets(Filter, AllAssets);
+
+	// Score each asset by name similarity
+	struct FScoredAsset
+	{
+		FString Path;
+		int32 Score;
+	};
+	TArray<FScoredAsset> ScoredAssets;
+
+	FString SearchLower = AssetName.ToLower();
+	// Strip common prefixes for matching
+	FString SearchClean = SearchLower;
+	SearchClean.RemoveFromStart(TEXT("bp_"));
+	SearchClean.RemoveFromStart(TEXT("m_"));
+	SearchClean.RemoveFromStart(TEXT("w_"));
+
+	for (const FAssetData& Asset : AllAssets)
+	{
+		FString Name = Asset.AssetName.ToString().ToLower();
+		FString NameClean = Name;
+		NameClean.RemoveFromStart(TEXT("bp_"));
+		NameClean.RemoveFromStart(TEXT("m_"));
+		NameClean.RemoveFromStart(TEXT("w_"));
+
+		int32 Score = 0;
+
+		// Exact match (shouldn't happen if we're here, but handle it)
+		if (Name == SearchLower)
+		{
+			Score = 1000;
+		}
+		// Contains the search term
+		else if (Name.Contains(SearchClean) || NameClean.Contains(SearchClean))
+		{
+			Score = 500;
+		}
+		// Search term contains the name
+		else if (SearchClean.Contains(NameClean) && NameClean.Len() > 2)
+		{
+			Score = 300;
+		}
+		// Starts with the same prefix
+		else if (NameClean.StartsWith(SearchClean.Left(FMath::Min(3, SearchClean.Len()))))
+		{
+			Score = 100;
+		}
+
+		if (Score > 0)
+		{
+			ScoredAssets.Add({Asset.GetObjectPathString(), Score});
+		}
+	}
+
+	// Sort by score descending
+	ScoredAssets.Sort([](const FScoredAsset& A, const FScoredAsset& B)
+	{
+		return A.Score > B.Score;
+	});
+
+	// Take top N
+	for (int32 i = 0; i < FMath::Min(MaxResults, ScoredAssets.Num()); ++i)
+	{
+		Results.Add(ScoredAssets[i].Path);
+	}
+
+	return Results;
+}

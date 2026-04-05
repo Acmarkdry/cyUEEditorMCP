@@ -2,6 +2,7 @@
 
 #include "Actions/MaterialActions.h"
 #include "MCPContext.h"
+#include "MCPCommonUtils.h"
 
 // Material system headers
 #include "Materials/Material.h"
@@ -297,7 +298,18 @@ UMaterial* FMaterialAction::FindMaterial(const FString& MaterialName, FString& O
 		}
 	}
 
-	OutError = FString::Printf(TEXT("Material '%s' not found"), *MaterialName);
+	// Include similar asset suggestions
+	TArray<FString> SimilarAssets = FMCPCommonUtils::FindSimilarAssets(MaterialName, 5);
+	if (SimilarAssets.Num() > 0)
+	{
+		FString SuggestionStr = FString::Join(SimilarAssets, TEXT(", "));
+		OutError = FString::Printf(TEXT("Material '%s' not found. Did you mean one of: [%s]?"),
+			*MaterialName, *SuggestionStr);
+	}
+	else
+	{
+		OutError = FString::Printf(TEXT("Material '%s' not found. No similar assets found in /Game/."), *MaterialName);
+	}
 	return nullptr;
 }
 
@@ -4022,22 +4034,18 @@ TSharedPtr<FJsonObject> FAnalyzeMaterialComplexityAction::ExecuteInternal(const 
 		CountOutput(EditorData->Refraction);
 	}
 
-	// --- Shader instruction counts ---
-	int32 VSInstructions = 0;
-	int32 PSInstructions = 0;
+	// --- Shader info ---
+	uint32 VSSamplers = 0;
+	uint32 PSSamplers = 0;
 	bool bCompiled = false;
 
 	const FMaterialResource* MatResource = Material->GetMaterialResource(GMaxRHIFeatureLevel);
 	if (MatResource)
 	{
-		int32 NumPS = MatResource->GetNumPixelShaderInstructions();
-		int32 NumVS = MatResource->GetNumVertexShaderInstructions();
-		if (NumPS > 0 || NumVS > 0)
-		{
-			bCompiled = true;
-			PSInstructions = NumPS;
-			VSInstructions = NumVS;
-		}
+#if WITH_EDITOR
+		MatResource->GetEstimatedNumTextureSamples(VSSamplers, PSSamplers);
+		bCompiled = (MatResource->GetGameThreadShaderMap() != nullptr);
+#endif
 	}
 
 	// --- Parameters ---
@@ -4129,17 +4137,17 @@ TSharedPtr<FJsonObject> FAnalyzeMaterialComplexityAction::ExecuteInternal(const 
 		NodeTypeDist->SetNumberField(Pair.Key, Pair.Value);
 	}
 
-	TSharedPtr<FJsonObject> ShaderInstructions = MakeShared<FJsonObject>();
-	ShaderInstructions->SetNumberField(TEXT("vs"), VSInstructions);
-	ShaderInstructions->SetNumberField(TEXT("ps"), PSInstructions);
-	ShaderInstructions->SetBoolField(TEXT("compiled"), bCompiled);
+	TSharedPtr<FJsonObject> ShaderInfo = MakeShared<FJsonObject>();
+	ShaderInfo->SetNumberField(TEXT("vs_samplers"), VSSamplers);
+	ShaderInfo->SetNumberField(TEXT("ps_samplers"), PSSamplers);
+	ShaderInfo->SetBoolField(TEXT("compiled"), bCompiled);
 
 	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
 	Result->SetStringField(TEXT("material_name"), MaterialName);
 	Result->SetNumberField(TEXT("node_count"), NodeCount);
 	Result->SetObjectField(TEXT("node_type_distribution"), NodeTypeDist);
 	Result->SetNumberField(TEXT("connection_count"), ConnectionCount);
-	Result->SetObjectField(TEXT("shader_instructions"), ShaderInstructions);
+	Result->SetObjectField(TEXT("shader_info"), ShaderInfo);
 	Result->SetArrayField(TEXT("parameters"), ParametersArray);
 	Result->SetArrayField(TEXT("texture_samples"), TextureSamplesArray);
 
@@ -4506,21 +4514,21 @@ TSharedPtr<FJsonObject> FDiffMaterialsAction::ExecuteInternal(const TSharedPtr<F
 			}
 
 			// Collect parameter names
-			if (UMaterialExpressionScalarParameter* P = Cast<UMaterialExpressionScalarParameter>(Expr))
+			if (auto* ScalarP = Cast<UMaterialExpressionScalarParameter>(Expr))
 			{
-				OutParamNames.Add(P->ParameterName.ToString());
+				OutParamNames.Add(ScalarP->ParameterName.ToString());
 			}
-			else if (UMaterialExpressionVectorParameter* P = Cast<UMaterialExpressionVectorParameter>(Expr))
+			else if (auto* VectorP = Cast<UMaterialExpressionVectorParameter>(Expr))
 			{
-				OutParamNames.Add(P->ParameterName.ToString());
+				OutParamNames.Add(VectorP->ParameterName.ToString());
 			}
-			else if (UMaterialExpressionTextureSampleParameter2D* P = Cast<UMaterialExpressionTextureSampleParameter2D>(Expr))
+			else if (auto* TexP = Cast<UMaterialExpressionTextureSampleParameter2D>(Expr))
 			{
-				OutParamNames.Add(P->ParameterName.ToString());
+				OutParamNames.Add(TexP->ParameterName.ToString());
 			}
-			else if (UMaterialExpressionStaticSwitchParameter* P = Cast<UMaterialExpressionStaticSwitchParameter>(Expr))
+			else if (auto* SwitchP = Cast<UMaterialExpressionStaticSwitchParameter>(Expr))
 			{
-				OutParamNames.Add(P->ParameterName.ToString());
+				OutParamNames.Add(SwitchP->ParameterName.ToString());
 			}
 		}
 
@@ -4683,36 +4691,36 @@ TSharedPtr<FJsonObject> FExtractMaterialParametersAction::ExecuteInternal(const 
 		ParamObj->SetStringField(TEXT("group"), BaseParam->Group.ToString());
 		ParamObj->SetNumberField(TEXT("sort_priority"), BaseParam->SortPriority);
 
-		if (UMaterialExpressionScalarParameter* P = Cast<UMaterialExpressionScalarParameter>(Expr))
+		if (auto* ScalarP2 = Cast<UMaterialExpressionScalarParameter>(Expr))
 		{
 			ParamObj->SetStringField(TEXT("type"), TEXT("ScalarParameter"));
-			ParamObj->SetNumberField(TEXT("default_value"), P->DefaultValue);
+			ParamObj->SetNumberField(TEXT("default_value"), ScalarP2->DefaultValue);
 		}
-		else if (UMaterialExpressionVectorParameter* P = Cast<UMaterialExpressionVectorParameter>(Expr))
+		else if (auto* VectorP2 = Cast<UMaterialExpressionVectorParameter>(Expr))
 		{
 			ParamObj->SetStringField(TEXT("type"), TEXT("VectorParameter"));
 			TArray<TSharedPtr<FJsonValue>> ColorArr;
-			ColorArr.Add(MakeShared<FJsonValueNumber>(P->DefaultValue.R));
-			ColorArr.Add(MakeShared<FJsonValueNumber>(P->DefaultValue.G));
-			ColorArr.Add(MakeShared<FJsonValueNumber>(P->DefaultValue.B));
-			ColorArr.Add(MakeShared<FJsonValueNumber>(P->DefaultValue.A));
+			ColorArr.Add(MakeShared<FJsonValueNumber>(VectorP2->DefaultValue.R));
+			ColorArr.Add(MakeShared<FJsonValueNumber>(VectorP2->DefaultValue.G));
+			ColorArr.Add(MakeShared<FJsonValueNumber>(VectorP2->DefaultValue.B));
+			ColorArr.Add(MakeShared<FJsonValueNumber>(VectorP2->DefaultValue.A));
 			ParamObj->SetArrayField(TEXT("default_value"), ColorArr);
 		}
-		else if (UMaterialExpressionTextureSampleParameter2D* P = Cast<UMaterialExpressionTextureSampleParameter2D>(Expr))
+		else if (auto* TexP2 = Cast<UMaterialExpressionTextureSampleParameter2D>(Expr))
 		{
 			ParamObj->SetStringField(TEXT("type"), TEXT("TextureSampleParameter2D"));
-			ParamObj->SetStringField(TEXT("default_value"), P->Texture ? P->Texture->GetPathName() : TEXT(""));
+			ParamObj->SetStringField(TEXT("default_value"), TexP2->Texture ? TexP2->Texture->GetPathName() : TEXT(""));
 		}
-		else if (UMaterialExpressionTextureObjectParameter* P = Cast<UMaterialExpressionTextureObjectParameter>(Expr))
+		else if (auto* TexObjP2 = Cast<UMaterialExpressionTextureObjectParameter>(Expr))
 		{
-			(void)P;
+			(void)TexObjP2;
 			ParamObj->SetStringField(TEXT("type"), TEXT("TextureObjectParameter"));
 			ParamObj->SetStringField(TEXT("default_value"), TEXT(""));
 		}
-		else if (UMaterialExpressionStaticSwitchParameter* P = Cast<UMaterialExpressionStaticSwitchParameter>(Expr))
+		else if (auto* SwitchP2 = Cast<UMaterialExpressionStaticSwitchParameter>(Expr))
 		{
 			ParamObj->SetStringField(TEXT("type"), TEXT("StaticSwitchParameter"));
-			ParamObj->SetBoolField(TEXT("default_value"), P->DefaultValue);
+			ParamObj->SetBoolField(TEXT("default_value"), SwitchP2->DefaultValue);
 		}
 		else
 		{
@@ -5116,17 +5124,17 @@ TSharedPtr<FJsonObject> FReplaceMaterialNodeAction::ExecuteInternal(const TShare
 	if (Params->HasField(TEXT("new_properties")))
 	{
 		const TSharedPtr<FJsonObject> NewProps = Params->GetObjectField(TEXT("new_properties"));
-		if (UMaterialExpressionScalarParameter* P = Cast<UMaterialExpressionScalarParameter>(NewExpr))
+		if (auto* ScalarP3 = Cast<UMaterialExpressionScalarParameter>(NewExpr))
 		{
 			FString Val;
 			double Num;
-			if (NewProps->TryGetStringField(TEXT("ParameterName"), Val)) P->ParameterName = FName(*Val);
-			if (NewProps->TryGetNumberField(TEXT("DefaultValue"), Num)) P->DefaultValue = (float)Num;
+			if (NewProps->TryGetStringField(TEXT("ParameterName"), Val)) ScalarP3->ParameterName = FName(*Val);
+			if (NewProps->TryGetNumberField(TEXT("DefaultValue"), Num)) ScalarP3->DefaultValue = (float)Num;
 		}
-		else if (UMaterialExpressionVectorParameter* P = Cast<UMaterialExpressionVectorParameter>(NewExpr))
+		else if (auto* VectorP3 = Cast<UMaterialExpressionVectorParameter>(NewExpr))
 		{
 			FString Val;
-			if (NewProps->TryGetStringField(TEXT("ParameterName"), Val)) P->ParameterName = FName(*Val);
+			if (NewProps->TryGetStringField(TEXT("ParameterName"), Val)) VectorP3->ParameterName = FName(*Val);
 		}
 	}
 

@@ -8,6 +8,7 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "ScopedTransaction.h"
 
 #if PLATFORM_WINDOWS && defined(_MSC_VER)
 #include "Windows/WindowsHWrapper.h"
@@ -25,7 +26,7 @@ TSharedPtr<FJsonObject> FEditorAction::Execute(const TSharedPtr<FJsonObject>& Pa
 
 	UE_LOG(LogMCP, Log, TEXT("UEEditorMCP: Action '%s' Execute started"), *GetActionName());
 
-	// Step 1: Pre-validation
+	// Step 1: Pre-validation (outside transaction — failed validation produces no undo record)
 	if (!Validate(Params, Context, Error))
 	{
 		UE_LOG(LogMCP, Warning, TEXT("UEEditorMCP: Action '%s' validation failed: %s"), *GetActionName(), *Error);
@@ -34,8 +35,20 @@ TSharedPtr<FJsonObject> FEditorAction::Execute(const TSharedPtr<FJsonObject>& Pa
 
 	UE_LOG(LogMCP, Log, TEXT("UEEditorMCP: Action '%s' validation passed"), *GetActionName());
 
-	// Step 2: Execute with crash protection
-	TSharedPtr<FJsonObject> Result = ExecuteWithCrashProtection(Params, Context);
+	// Step 2: Execute with crash protection, optionally wrapped in a transaction for undo support
+	TSharedPtr<FJsonObject> Result;
+	if (IsWriteAction())
+	{
+		// Write actions are wrapped in FScopedTransaction so they can be undone with Ctrl+Z
+		FScopedTransaction Transaction(FText::FromString(
+			FString::Printf(TEXT("MCP: %s"), *GetActionName())));
+		Result = ExecuteWithCrashProtection(Params, Context);
+	}
+	else
+	{
+		Result = ExecuteWithCrashProtection(Params, Context);
+	}
+
 	if (!Result)
 	{
 		UE_LOG(LogMCP, Error, TEXT("UEEditorMCP: Action '%s' returned nullptr!"), *GetActionName());
@@ -151,6 +164,32 @@ TSharedPtr<FJsonObject> FEditorAction::CreateErrorResponse(const FString& ErrorM
 	return Response;
 }
 
+TSharedPtr<FJsonObject> FEditorAction::CreateErrorResponseWithSuggestions(
+	const FString& ErrorMessage,
+	const FString& ErrorType,
+	const TArray<FString>& Suggestions,
+	const TSharedPtr<FJsonObject>& ContextData) const
+{
+	TSharedPtr<FJsonObject> Response = CreateErrorResponse(ErrorMessage, ErrorType);
+
+	if (Suggestions.Num() > 0)
+	{
+		TArray<TSharedPtr<FJsonValue>> SuggestionsArray;
+		for (const FString& Suggestion : Suggestions)
+		{
+			SuggestionsArray.Add(MakeShared<FJsonValueString>(Suggestion));
+		}
+		Response->SetArrayField(TEXT("suggestions"), SuggestionsArray);
+	}
+
+	if (ContextData.IsValid())
+	{
+		Response->SetObjectField(TEXT("context"), ContextData);
+	}
+
+	return Response;
+}
+
 TSharedPtr<FJsonObject> FEditorAction::CreateCrashPreventedResponse() const
 {
 	return CreateErrorResponse(
@@ -223,7 +262,18 @@ UBlueprint* FEditorAction::FindBlueprint(const FString& BlueprintName, FString& 
 	UBlueprint* BP = FMCPCommonUtils::FindBlueprint(BlueprintName);
 	if (!BP)
 	{
-		OutError = FString::Printf(TEXT("Blueprint '%s' not found"), *BlueprintName);
+		// Include similar asset suggestions in the error message
+		TArray<FString> SimilarAssets = FMCPCommonUtils::FindSimilarAssets(BlueprintName, 5);
+		if (SimilarAssets.Num() > 0)
+		{
+			FString SuggestionStr = FString::Join(SimilarAssets, TEXT(", "));
+			OutError = FString::Printf(TEXT("Blueprint '%s' not found. Did you mean one of: [%s]?"),
+				*BlueprintName, *SuggestionStr);
+		}
+		else
+		{
+			OutError = FString::Printf(TEXT("Blueprint '%s' not found. No similar assets found in /Game/."), *BlueprintName);
+		}
 	}
 	return BP;
 }

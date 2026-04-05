@@ -124,17 +124,27 @@ TSharedPtr<FJsonObject> FConnectBlueprintNodesAction::ExecuteInternal(const TSha
 	if (!SourcePin)
 	{
 		FString AvailablePins = GetAvailablePins(SourceNode, EGPD_Output);
-		return CreateErrorResponse(FString::Printf(
-			TEXT("Source pin '%s' not found on node. Available OUTPUT pins: [%s]"),
-			*SourcePinName, *AvailablePins));
+		TArray<FString> Suggestions;
+		Suggestions.Add(FString::Printf(TEXT("Available OUTPUT pins: [%s]"), *AvailablePins));
+		Suggestions.Add(TEXT("Pin names are case-sensitive. Use get_node_pins to inspect exact names."));
+		return CreateErrorResponseWithSuggestions(
+			FString::Printf(TEXT("Source pin '%s' not found on node"), *SourcePinName),
+			TEXT("pin_not_found"),
+			Suggestions,
+			FMCPCommonUtils::CollectAvailablePins(SourceNode));
 	}
 
 	if (!TargetPin)
 	{
 		FString AvailablePins = GetAvailablePins(TargetNode, EGPD_Input);
-		return CreateErrorResponse(FString::Printf(
-			TEXT("Target pin '%s' not found on node. Available INPUT pins: [%s]"),
-			*TargetPinName, *AvailablePins));
+		TArray<FString> Suggestions;
+		Suggestions.Add(FString::Printf(TEXT("Available INPUT pins: [%s]"), *AvailablePins));
+		Suggestions.Add(TEXT("Pin names are case-sensitive. Use get_node_pins to inspect exact names."));
+		return CreateErrorResponseWithSuggestions(
+			FString::Printf(TEXT("Target pin '%s' not found on node"), *TargetPinName),
+			TEXT("pin_not_found"),
+			Suggestions,
+			FMCPCommonUtils::CollectAvailablePins(TargetNode));
 	}
 
 	// Connect using the schema
@@ -1096,11 +1106,22 @@ TSharedPtr<FJsonObject> FSetNodePinDefaultAction::ExecuteInternal(const TSharedP
 		return CreateErrorResponse(FString::Printf(TEXT("Node not found: %s"), *NodeId));
 	}
 
-	// Find the pin
+	// Find the pin — try input first, then output (some default values are on output pins)
 	UEdGraphPin* TargetPin = FMCPCommonUtils::FindPin(TargetNode, PinName, EGPD_Input);
 	if (!TargetPin)
 	{
-		return CreateErrorResponse(FString::Printf(TEXT("Pin not found: %s"), *PinName));
+		TargetPin = FMCPCommonUtils::FindPin(TargetNode, PinName, EGPD_Output);
+	}
+	if (!TargetPin)
+	{
+		TArray<FString> Suggestions;
+		Suggestions.Add(TEXT("Pin names are case-sensitive."));
+		Suggestions.Add(TEXT("Use get_node_pins with the node_id to see all available pins."));
+		return CreateErrorResponseWithSuggestions(
+			FString::Printf(TEXT("Pin '%s' not found on node"), *PinName),
+			TEXT("pin_not_found"),
+			Suggestions,
+			FMCPCommonUtils::CollectAvailablePins(TargetNode));
 	}
 
 	// Set the default value - handle object pins differently
@@ -4212,18 +4233,13 @@ TSharedPtr<FJsonObject> FDisconnectBlueprintPinAction::ExecuteInternal(const TSh
 
 	if (!TargetPin)
 	{
-		// List available pins for helpful error
-		TArray<FString> PinNames;
-		for (UEdGraphPin* Pin : FoundNode->Pins)
-		{
-			if (!Pin->bHidden)
-			{
-				PinNames.Add(FString::Printf(TEXT("'%s' (%s)"), *Pin->PinName.ToString(),
-					Pin->Direction == EGPD_Input ? TEXT("Input") : TEXT("Output")));
-			}
-		}
-		FString AvailableStr = FString::Join(PinNames, TEXT(", "));
-		return CreateErrorResponse(FString::Printf(TEXT("Pin '%s' not found. Available: [%s]"), *PinName, *AvailableStr));
+		TArray<FString> Suggestions;
+		Suggestions.Add(TEXT("Pin names are case-sensitive. Use get_node_pins to see exact names."));
+		return CreateErrorResponseWithSuggestions(
+			FString::Printf(TEXT("Pin '%s' not found on node"), *PinName),
+			TEXT("pin_not_found"),
+			Suggestions,
+			FMCPCommonUtils::CollectAvailablePins(FoundNode));
 	}
 
 	int32 DisconnectedCount = TargetPin->LinkedTo.Num();

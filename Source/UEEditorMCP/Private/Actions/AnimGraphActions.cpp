@@ -19,12 +19,12 @@
 
 // AnimGraph / AnimBlueprint
 #include "Animation/AnimBlueprint.h"
-#include "AnimBlueprintGraph.h"
 #include "AnimStateNode.h"
 #include "AnimStateEntryNode.h"
 #include "AnimStateTransitionNode.h"
 #include "AnimGraphNode_Base.h"
 #include "AnimGraphNode_StateMachine.h"
+#include "AnimationStateMachineGraph.h"
 #include "AnimGraphNode_SequencePlayer.h"
 #include "AnimGraphNode_BlendSpacePlayer.h"
 #include "AnimGraphNode_LayeredBoneBlend.h"
@@ -92,8 +92,7 @@ UEdGraph* FindAnimSubGraph(UAnimBlueprint* AnimBP, const FString& GraphName, FSt
 		for (UEdGraphNode* Node : ParentGraph->Nodes)
 		{
 			if (!Node) continue;
-			TArray<UEdGraph*> SubGraphs;
-			Node->GetBoundGraphs(SubGraphs);
+			TArray<UEdGraph*> SubGraphs = Node->GetSubGraphs();
 			for (UEdGraph* SubGraph : SubGraphs)
 			{
 				if (SubGraph && SubGraph->GetName() == GraphName)
@@ -259,18 +258,18 @@ void ExtractAnimAssetReferences(const UEdGraphNode* Node, TSharedPtr<FJsonObject
 	// AnimSequence Player
 	if (const UAnimGraphNode_SequencePlayer* SeqPlayer = Cast<UAnimGraphNode_SequencePlayer>(Node))
 	{
-		if (SeqPlayer->Node.Sequence)
+		if (SeqPlayer->Node.GetSequence())
 		{
-			OutNodeObj->SetStringField(TEXT("anim_sequence"), SeqPlayer->Node.Sequence->GetPathName());
+			OutNodeObj->SetStringField(TEXT("anim_sequence"), SeqPlayer->Node.GetSequence()->GetPathName());
 		}
 	}
 
 	// BlendSpace Player
 	if (const UAnimGraphNode_BlendSpacePlayer* BSPlayer = Cast<UAnimGraphNode_BlendSpacePlayer>(Node))
 	{
-		if (BSPlayer->Node.BlendSpace)
+		if (BSPlayer->Node.GetBlendSpace())
 		{
-			OutNodeObj->SetStringField(TEXT("blend_space"), BSPlayer->Node.BlendSpace->GetPathName());
+			OutNodeObj->SetStringField(TEXT("blend_space"), BSPlayer->Node.GetBlendSpace()->GetPathName());
 		}
 	}
 }
@@ -346,8 +345,7 @@ static void CollectAllSubGraphs(UEdGraph* RootGraph, TArray<UEdGraph*>& OutGraph
 	for (UEdGraphNode* Node : RootGraph->Nodes)
 	{
 		if (!Node) continue;
-		TArray<UEdGraph*> SubGraphs;
-		Node->GetBoundGraphs(SubGraphs);
+		TArray<UEdGraph*> SubGraphs = Node->GetSubGraphs();
 		for (UEdGraph* Sub : SubGraphs)
 		{
 			if (Sub && !OutGraphs.Contains(Sub))
@@ -964,7 +962,7 @@ TSharedPtr<FJsonObject> FCreateAnimBlueprintAction::ExecuteInternal(const TShare
 	UClass* ParentClass = UAnimInstance::StaticClass();
 	if (!ParentClassName.IsEmpty() && !ParentClassName.Equals(TEXT("AnimInstance"), ESearchCase::IgnoreCase))
 	{
-		UClass* ResolvedClass = FindObject<UClass>(ANY_PACKAGE, *ParentClassName);
+		UClass* ResolvedClass = FindFirstObject<UClass>(*ParentClassName, EFindFirstObjectOptions::NativeFirst);
 		if (!ResolvedClass)
 		{
 			ResolvedClass = LoadClass<UAnimInstance>(nullptr,
@@ -1180,7 +1178,10 @@ TSharedPtr<FJsonObject> FAddStateAction::ExecuteInternal(const TSharedPtr<FJsonO
 		SMGraph, Position, EK2NewNodeFlags::None,
 		[&StateName](UAnimStateNode* Node)
 		{
-			Node->SetStateName(FName(*StateName));
+			if (Node->BoundGraph)
+			{
+				Node->BoundGraph->Rename(*StateName, nullptr, REN_DontCreateRedirectors);
+			}
 		}
 	);
 
@@ -1590,12 +1591,12 @@ TSharedPtr<FJsonObject> FAddAnimNodeAction::ExecuteInternal(const TSharedPtr<FJs
 		if (UAnimGraphNode_SequencePlayer* SeqPlayer = Cast<UAnimGraphNode_SequencePlayer>(NewNode))
 		{
 			UAnimSequence* Seq = LoadObject<UAnimSequence>(nullptr, *AnimAsset);
-			if (Seq) SeqPlayer->Node.Sequence = Seq;
+			if (Seq) SeqPlayer->SetAnimationAsset(Seq);
 		}
 		else if (UAnimGraphNode_BlendSpacePlayer* BSPlayer = Cast<UAnimGraphNode_BlendSpacePlayer>(NewNode))
 		{
 			UBlendSpace* BS = LoadObject<UBlendSpace>(nullptr, *AnimAsset);
-			if (BS) BSPlayer->Node.BlendSpace = BS;
+			if (BS) BSPlayer->SetAnimationAsset(BS);
 		}
 	}
 
@@ -1958,7 +1959,10 @@ TSharedPtr<FJsonObject> FRenameStateAction::ExecuteInternal(const TSharedPtr<FJs
 
 	if (UAnimStateNode* ConcreteState = Cast<UAnimStateNode>(StateNode))
 	{
-		ConcreteState->SetStateName(FName(*NewName));
+		if (ConcreteState->BoundGraph)
+		{
+			ConcreteState->BoundGraph->Rename(*NewName, nullptr, REN_DontCreateRedirectors);
+		}
 	}
 
 	MarkBlueprintModified(Blueprint, Context);

@@ -43,6 +43,7 @@ from mcp.types import Tool, TextContent, ImageContent
 
 from .connection import get_connection, CommandResult
 from .context import ContextStore
+from .permissions import PermissionPolicy
 from .registry import get_registry
 from .skills import get_skill_list, load_skill
 
@@ -64,6 +65,10 @@ logger = logging.getLogger(__name__)
 
 _MAX_BATCH = 50
 _LOG_BUFFER_SIZE = 200
+
+# ── P9: Permission policy ───────────────────────────────────────────────
+
+_permission_policy = PermissionPolicy()  # default: auto (allow all)
 
 # ── context store (initialised lazily in _run) ──────────────────────────
 
@@ -214,6 +219,19 @@ def _resolve_action_to_cpp_command(
 
 def _execute_action(action_id: str, params: dict | None = None) -> dict:
     """Execute a registered action by its ID, with special dispatch for UMG widgets."""
+    # P9: Permission check
+    registry = get_registry()
+    action_def = registry.get(action_id)
+    if action_def:
+        rejection = _permission_policy.check(
+            action_id=action_id,
+            risk=getattr(action_def, "risk", "safe"),
+            capabilities=getattr(action_def, "capabilities", ()),
+            confirm=bool((params or {}).get("confirm", False)),
+        )
+        if rejection:
+            return rejection
+
     command, final_params, error = _resolve_action_to_cpp_command(action_id, params)
     if error:
         return {"success": False, "error": error}
@@ -546,23 +564,30 @@ async def call_tool(
 
         # Helper to extract image from a dict
         def _extract_image(item: dict):
-            if "image_base64" in item:
-                base64_data = item.get("image_base64")
+            # Support both "image_base64" (thumbnail) and "image" (viewport screenshot) fields
+            raw_data = item.get("image_base64") or item.get("image")
+            if raw_data:
                 mime_type = item.get("mime_type", "image/png")
-                if base64_data:
-                    if base64_data.startswith("data:"):
-                        base64_data = base64_data.split(",", 1)[1]
-                    image_key = (mime_type, base64_data)
-                    if image_key not in seen_images:
-                        contents.append(
-                            ImageContent(
-                                type="image", data=base64_data, mimeType=mime_type
-                            )
+                base64_data = raw_data
+                if base64_data.startswith("data:"):
+                    # Parse "data:image/png;base64,XXXX" format
+                    header, base64_data = base64_data.split(",", 1)
+                    if "image/" in header:
+                        mime_type = header.split(";")[0].replace("data:", "")
+                image_key = (mime_type, base64_data[:64])  # Use prefix for dedup
+                if image_key not in seen_images:
+                    contents.append(
+                        ImageContent(
+                            type="image", data=base64_data, mimeType=mime_type
                         )
-                        seen_images.add(image_key)
-                        nonlocal image_blocks_count
-                        image_blocks_count += 1
-                item["image_base64"] = "<base64_data_extracted_to_image_content>"
+                    )
+                    seen_images.add(image_key)
+                    nonlocal image_blocks_count
+                    image_blocks_count += 1
+                if "image_base64" in item:
+                    item["image_base64"] = "<base64_data_extracted_to_image_content>"
+                if "image" in item:
+                    item["image"] = "<base64_data_extracted_to_image_content>"
 
         # Prefer list-form thumbnails. Fallback to top-level singleton fields.
         has_thumbnail_list = (

@@ -14,7 +14,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "Python"))
 from ue_cli_tool.registry import ActionRegistry, ActionDef, get_registry
 from ue_cli_tool.cli_parser import CliParser, ParseResult, CommandDict
 
-
 # 鈹€鈹€ Test fixture: real registry 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
 
@@ -88,7 +87,9 @@ class TestContext:
             assert cmd.params.get("blueprint_name") == "BP_Enemy"
 
     def test_material_context(self, parser: CliParser):
-        result = parser.parse("@M_Glow\nadd_material_expression MaterialExpressionVectorParameter BaseColor")
+        result = parser.parse(
+            "@M_Glow\nadd_material_expression MaterialExpressionVectorParameter BaseColor"
+        )
         cmd = result.commands[0]
         assert cmd.params.get("material_name") == "M_Glow"
 
@@ -109,7 +110,9 @@ class TestPositionalParams:
         assert cmd.params["parent_class"] == "Actor"
 
     def test_context_excluded_slot_filling(self, parser: CliParser):
-        result = parser.parse("@BP_Enemy\nadd_component_to_blueprint StaticMeshComponent Mesh")
+        result = parser.parse(
+            "@BP_Enemy\nadd_component_to_blueprint StaticMeshComponent Mesh"
+        )
         cmd = result.commands[0]
         assert cmd.params["blueprint_name"] == "BP_Enemy"
         assert cmd.params["component_type"] == "StaticMeshComponent"
@@ -149,7 +152,9 @@ class TestFlagParams:
         assert cmd.params["is_exposed"] is True
 
     def test_flag_array(self, parser: CliParser):
-        result = parser.parse("add_component_to_blueprint StaticMeshComponent Mesh --location [0,0,100]")
+        result = parser.parse(
+            "add_component_to_blueprint StaticMeshComponent Mesh --location [0,0,100]"
+        )
         cmd = result.commands[0]
         assert cmd.params["location"] == [0, 0, 100]
 
@@ -159,7 +164,9 @@ class TestFlagParams:
         assert cmd.params["verbose"] is True
 
     def test_mixed_positional_and_flags(self, parser: CliParser):
-        result = parser.parse("@BP_E\nadd_component_to_blueprint StaticMeshComponent Mesh --location [0,0,100] --scale [2,2,2]")
+        result = parser.parse(
+            "@BP_E\nadd_component_to_blueprint StaticMeshComponent Mesh --location [0,0,100] --scale [2,2,2]"
+        )
         cmd = result.commands[0]
         assert cmd.params["blueprint_name"] == "BP_E"
         assert cmd.params["component_type"] == "StaticMeshComponent"
@@ -208,13 +215,17 @@ class TestQuotedStrings:
     def test_quoted_positional(self, parser: CliParser):
         # add_blueprint_comment required: [blueprint_name, comment_text]
         # With @target, blueprint_name is filled by context, so first positional 鈫?comment_text
-        result = parser.parse('@BP_Test\nadd_blueprint_comment "This is a multi word comment"')
+        result = parser.parse(
+            '@BP_Test\nadd_blueprint_comment "This is a multi word comment"'
+        )
         cmd = result.commands[0]
         assert cmd.params.get("comment_text") == "This is a multi word comment"
         assert cmd.params.get("blueprint_name") == "BP_Test"
 
     def test_quoted_flag_value(self, parser: CliParser):
-        result = parser.parse('set_node_pin_default NODE1 InString --default_value "Hello World"')
+        result = parser.parse(
+            'set_node_pin_default NODE1 InString --default_value "Hello World"'
+        )
         cmd = result.commands[0]
         assert cmd.params["default_value"] == "Hello World"
 
@@ -224,7 +235,9 @@ class TestQuotedStrings:
 
 class TestBatchConversion:
     def test_to_batch_commands(self, parser: CliParser):
-        result = parser.parse("@BP_Test\ncreate_blueprint BP_Test Actor\ncompile_blueprint")
+        result = parser.parse(
+            "@BP_Test\ncreate_blueprint BP_Test Actor\ncompile_blueprint"
+        )
         batch = parser.to_batch_commands(result)
         assert len(batch) == 2
         assert batch[0]["type"] == "create_blueprint"

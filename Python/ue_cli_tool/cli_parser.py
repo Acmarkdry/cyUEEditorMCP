@@ -100,7 +100,9 @@ class CliParser:
 
         return result
 
-    def parse_line(self, line: str, context: dict[str, Any] | None = None) -> CommandDict:
+    def parse_line(
+        self, line: str, context: dict[str, Any] | None = None
+    ) -> CommandDict:
         """Parse a single CLI line with context injection.
 
         Parameters
@@ -187,8 +189,7 @@ class CliParser:
         Returns a list of dicts: ``{"type": <command>, "params": {...}}``.
         """
         return [
-            {"type": cmd.command, "params": cmd.params}
-            for cmd in parse_result.commands
+            {"type": cmd.command, "params": cmd.params} for cmd in parse_result.commands
         ]
 
     # 鈹€鈹€ internal helpers 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€

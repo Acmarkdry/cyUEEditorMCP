@@ -232,9 +232,7 @@ async def call_tool(
     return contents
 
 
-def _extract_images(
-    result: dict, contents: list[TextContent | ImageContent]
-) -> None:
+def _extract_images(result: dict, contents: list[TextContent | ImageContent]) -> None:
     """Extract base64 image data into ImageContent blocks."""
     seen: set[tuple[str, str]] = set()
 
@@ -438,7 +436,10 @@ def _handle_query(args: dict) -> Any:
         ok = conn.ping()
         return {"success": ok, "pong": ok}
 
-    return {"success": False, "error": f"Unknown query: '{sub}'. Try: help, search, context, logs, metrics, health, resources, skills, ping"}
+    return {
+        "success": False,
+        "error": f"Unknown query: '{sub}'. Try: help, search, context, logs, metrics, health, resources, skills, ping",
+    }
 
 
 # 鈹€鈹€ help helpers 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
@@ -530,9 +531,7 @@ def _help_command(command_name: str) -> dict:
     return {"success": True, "help": "\n".join(lines)}
 
 
-def _format_example_as_cli(
-    command: str, example: dict, required: list[str]
-) -> str:
+def _format_example_as_cli(command: str, example: dict, required: list[str]) -> str:
     """Format a JSON example dict as a CLI line."""
     parts = [command]
     remaining = dict(example)

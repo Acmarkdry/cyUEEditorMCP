@@ -1,9 +1,0 @@
-id: github-actions-ci
-type: change
-status: archived
-created: 2026-04-05
-updated: 2026-04-05
-artifacts:
-  proposal: done
-  design: done
-  tasks: done

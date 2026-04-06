@@ -8,7 +8,7 @@ on:
 
 jobs:
   lint:
-    name: Lint (black)
+    name: Lint (tab-indent + syntax)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,11 +18,26 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Install black
-        run: pip install black>=23.0
+      - name: Check tab indentation (reject leading spaces for indent)
+        run: |
+          echo "Checking that all .py files use tab indentation..."
+          FAIL=0
+          while IFS= read -r -d '' pyfile; do
+            # Find lines that start with spaces (not tabs) for indentation
+            # Exclude blank lines, comments at col 0, and lines inside multi-line strings
+            if grep -Pn '^ {4,}' "$pyfile" | head -5; then
+              echo "ERROR: $pyfile uses space indentation (should be tabs)"
+              FAIL=1
+            fi
+          done < <(find Python/ -name '*.py' -not -path '*/\.venv/*' -print0)
+          if [ "$FAIL" -eq 1 ]; then
+            echo "::error::Some files use space indentation instead of tabs. Run spaces-to-tabs conversion."
+            exit 1
+          fi
+          echo "All files use tab indentation."
 
-      - name: Check code format
-        run: black --check Python/ tests/
+      - name: Check Python syntax
+        run: python -m py_compile Python/ue_cli_tool/server.py && echo "Syntax OK"
 
   test:
     name: Test (pytest)

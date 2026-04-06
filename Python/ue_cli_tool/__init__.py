@@ -1,5 +1,5 @@
-﻿"""
-UE CLI Tool 鈥?CLI-native AI interface for controlling Unreal Engine Editor.
+"""
+UE CLI Tool —?CLI-native AI interface for controlling Unreal Engine Editor.
 
 Provides a minimal 2-tool MCP server (ue_cli + ue_query) that accepts
 CLI-style text commands, parsed via CliParser and executed over TCP.

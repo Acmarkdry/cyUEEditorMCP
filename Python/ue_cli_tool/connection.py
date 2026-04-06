@@ -1,3 +1,4 @@
+# coding: utf-8
 """
 Persistent connection to Unreal Engine MCP Bridge.
 

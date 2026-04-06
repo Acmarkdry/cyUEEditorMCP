@@ -1,3 +1,4 @@
+# coding: utf-8
 """
 CLI-native MCP Server —?2 tools: ue_cli + ue_query.
 

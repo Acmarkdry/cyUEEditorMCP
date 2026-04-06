@@ -1,3 +1,4 @@
+# coding: utf-8
 """
 Action definitions — ~95 retained C++ actions + python.exec, registered with metadata.
 

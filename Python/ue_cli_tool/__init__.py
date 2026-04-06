@@ -1,3 +1,4 @@
+# coding: utf-8
 """
 UE CLI Tool —?CLI-native AI interface for controlling Unreal Engine Editor.
 

@@ -1,3 +1,4 @@
+# coding: utf-8
 """
 Action Registry —?metadata + search for all UE MCP actions.
 

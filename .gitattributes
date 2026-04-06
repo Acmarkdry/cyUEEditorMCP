@@ -1,0 +1,22 @@
+# Force UTF-8 and LF for all text files
+* text=auto eol=lf
+
+# Python sources — always UTF-8, LF line endings
+*.py text encoding=utf-8 eol=lf
+
+# C++ sources
+*.h text encoding=utf-8 eol=lf
+*.cpp text encoding=utf-8 eol=lf
+
+# Config files
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+
+# Binary files — never touch
+*.uasset binary
+*.umap binary
+*.dll binary
+*.exe binary
+*.pdb binary

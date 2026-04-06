@@ -1,3 +1,4 @@
+# coding: utf-8
 """
 CLI Parser —?parse CLI-style text into executable command dicts.
 

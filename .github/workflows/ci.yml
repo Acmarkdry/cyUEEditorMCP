@@ -8,7 +8,7 @@ on:
 
 jobs:
   lint:
-    name: Lint (tab-indent + syntax)
+    name: Lint (encoding + indent + syntax)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,26 +18,51 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Check tab indentation (reject leading spaces for indent)
+      - name: Check encoding (UTF-8, no BOM, has coding declaration)
         run: |
-          echo "Checking that all .py files use tab indentation..."
+          echo "=== Encoding checks ==="
           FAIL=0
           while IFS= read -r -d '' pyfile; do
-            # Find lines that start with spaces (not tabs) for indentation
-            # Exclude blank lines, comments at col 0, and lines inside multi-line strings
+            # Reject UTF-8 BOM (EF BB BF)
+            if head -c3 "$pyfile" | xxd -p | grep -q 'efbbbf'; then
+              echo "::error file=$pyfile::Has UTF-8 BOM — remove it"
+              FAIL=1
+            fi
+            # Verify file is valid UTF-8
+            if ! iconv -f utf-8 -t utf-8 "$pyfile" > /dev/null 2>&1; then
+              echo "::error file=$pyfile::Not valid UTF-8 — may contain GBK/Latin-1 bytes"
+              FAIL=1
+            fi
+            # Check for # coding: utf-8 in first 3 lines
+            if ! head -3 "$pyfile" | grep -q 'coding.*utf-8'; then
+              echo "::warning file=$pyfile::Missing '# coding: utf-8' declaration"
+            fi
+          done < <(find Python/ -name '*.py' -not -path '*/\.venv/*' -print0)
+          if [ "$FAIL" -eq 1 ]; then exit 1; fi
+          echo "All encoding checks passed."
+
+      - name: Check tab indentation (reject leading spaces)
+        run: |
+          FAIL=0
+          while IFS= read -r -d '' pyfile; do
             if grep -Pn '^ {4,}' "$pyfile" | head -5; then
-              echo "ERROR: $pyfile uses space indentation (should be tabs)"
+              echo "::error file=$pyfile::Uses space indentation (should be tabs)"
               FAIL=1
             fi
           done < <(find Python/ -name '*.py' -not -path '*/\.venv/*' -print0)
-          if [ "$FAIL" -eq 1 ]; then
-            echo "::error::Some files use space indentation instead of tabs. Run spaces-to-tabs conversion."
-            exit 1
-          fi
+          if [ "$FAIL" -eq 1 ]; then exit 1; fi
           echo "All files use tab indentation."
 
       - name: Check Python syntax
-        run: python -m py_compile Python/ue_cli_tool/server.py && echo "Syntax OK"
+        run: |
+          FAIL=0
+          while IFS= read -r -d '' pyfile; do
+            if ! python -m py_compile "$pyfile" 2>&1; then
+              FAIL=1
+            fi
+          done < <(find Python/ -name '*.py' -not -path '*/\.venv/*' -print0)
+          if [ "$FAIL" -eq 1 ]; then exit 1; fi
+          echo "All syntax checks passed."
 
   test:
     name: Test (pytest)

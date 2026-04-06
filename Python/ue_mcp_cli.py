@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# coding: utf-8
 """
 UE MCP Bridge CLI —?send commands to Unreal MCPBridge via TCP.
 

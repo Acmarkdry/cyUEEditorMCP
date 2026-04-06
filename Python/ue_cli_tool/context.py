@@ -1,3 +1,4 @@
+# coding: utf-8
 """
 Context Layer —?persistent cross-session state for the MCP server.
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# coding: utf-8
 """
 UE Bridge —?Complete Python interface to Unreal Engine MCPBridge.
 

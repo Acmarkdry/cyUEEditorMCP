@@ -1,3 +1,4 @@
+# coding: utf-8
 """
 Request pipeline for UE MCP Bridge.
 

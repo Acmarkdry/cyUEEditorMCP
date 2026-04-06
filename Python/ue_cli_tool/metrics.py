@@ -1,3 +1,4 @@
+# coding: utf-8
 """
 Metrics collection for UE MCP Bridge requests.
 

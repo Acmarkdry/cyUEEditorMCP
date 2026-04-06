@@ -1,3 +1,4 @@
+# coding: utf-8
 """
 Skill system — domain-grouped action catalogs for AI on-demand loading.
 

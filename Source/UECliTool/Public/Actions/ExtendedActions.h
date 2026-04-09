@@ -58,6 +58,51 @@ protected:
 };
 
 // ============================================================================
+// v0.3.0: Level/World Enhanced Actions
+// ============================================================================
+
+/** Load/switch to a specified level in the editor. */
+class UECLITOOL_API FLoadLevelAction : public FEditorAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
+	virtual FString GetActionName() const override { return TEXT("load_level"); }
+};
+
+/** Create a streaming sublevel. */
+class UECLITOOL_API FCreateSublevelAction : public FEditorAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
+	virtual FString GetActionName() const override { return TEXT("create_sublevel"); }
+};
+
+/** Modify World Settings (set counterpart to get_world_settings). */
+class UECLITOOL_API FSetWorldSettingsAction : public FEditorAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override { return true; }
+	virtual FString GetActionName() const override { return TEXT("set_world_settings"); }
+};
+
+/** Get the bounding box of all actors in the current level. */
+class UECLITOOL_API FGetLevelBoundsAction : public FEditorAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override { return true; }
+	virtual FString GetActionName() const override { return TEXT("get_level_bounds"); }
+	virtual bool RequiresSave() const override { return false; }
+};
+
+// ============================================================================
 // P10: Profiler Actions
 // ============================================================================
 

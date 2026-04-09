@@ -68,3 +68,58 @@ protected:
 	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
 	virtual FString GetActionName() const override { return TEXT("set_sequencer_range"); }
 };
+
+// ============================================================================
+// v0.3.0: Sequencer Enhanced Actions
+// ============================================================================
+
+/** Add a keyframe to a sequencer track. */
+class UECLITOOL_API FAddSequencerKeyframeAction : public FSequencerAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
+	virtual FString GetActionName() const override { return TEXT("add_sequencer_keyframe"); }
+};
+
+/** Modify or delete an existing keyframe. */
+class UECLITOOL_API FSetSequencerKeyframeAction : public FSequencerAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
+	virtual FString GetActionName() const override { return TEXT("set_sequencer_keyframe"); }
+};
+
+/** Add a Camera Cut track and bind a camera actor. */
+class UECLITOOL_API FAddCameraCutTrackAction : public FSequencerAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
+	virtual FString GetActionName() const override { return TEXT("add_camera_cut_track"); }
+};
+
+/** Add a Spawnable object to a sequence. */
+class UECLITOOL_API FAddSequencerSpawnableAction : public FSequencerAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
+	virtual FString GetActionName() const override { return TEXT("add_sequencer_spawnable"); }
+};
+
+/** Preview play a sequence in the editor. */
+class UECLITOOL_API FPlaySequencePreviewAction : public FSequencerAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
+	virtual FString GetActionName() const override { return TEXT("play_sequence_preview"); }
+	virtual bool RequiresSave() const override { return false; }
+};

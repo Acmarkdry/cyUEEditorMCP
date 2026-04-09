@@ -8,6 +8,7 @@
 #include "Tracks/MovieSceneFloatTrack.h"
 #include "Tracks/MovieSceneBoolTrack.h"
 #include "Tracks/MovieSceneVisibilityTrack.h"
+#include "Tracks/MovieSceneCameraCutTrack.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "IAssetTools.h"
@@ -323,6 +324,242 @@ TSharedPtr<FJsonObject> FSetSequencerRangeAction::ExecuteInternal(const TSharedP
 	Result->SetStringField(TEXT("sequence_name"), SeqName);
 	Result->SetNumberField(TEXT("start_seconds"), StartSeconds);
 	Result->SetNumberField(TEXT("end_seconds"), EndSeconds);
+
+	return CreateSuccessResponse(Result);
+}
+
+// ============================================================================
+// v0.3.0: add_sequencer_keyframe
+// ============================================================================
+
+bool FAddSequencerKeyframeAction::Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError)
+{
+	FString Seq, Bind, Track, Val;
+	if (!GetRequiredString(Params, TEXT("sequence_path"), Seq, OutError)) return false;
+	if (!GetRequiredString(Params, TEXT("binding_name"), Bind, OutError)) return false;
+	if (!GetRequiredString(Params, TEXT("track_type"), Track, OutError)) return false;
+	if (!GetRequiredString(Params, TEXT("value"), Val, OutError)) return false;
+	if (!Params->HasField(TEXT("frame")))
+	{
+		OutError = TEXT("Missing required parameter: frame");
+		return false;
+	}
+	return true;
+}
+
+TSharedPtr<FJsonObject> FAddSequencerKeyframeAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	FString SeqPath = Params->GetStringField(TEXT("sequence_path"));
+	FString BindingName = Params->GetStringField(TEXT("binding_name"));
+	FString TrackType = Params->GetStringField(TEXT("track_type"));
+	int32 FrameNum = static_cast<int32>(Params->GetNumberField(TEXT("frame")));
+	FString Value = Params->GetStringField(TEXT("value"));
+
+	FString Error;
+	ULevelSequence* Sequence = FindLevelSequence(SeqPath, Error);
+	if (!Sequence) return CreateErrorResponse(Error);
+
+	UMovieScene* MovieScene = Sequence->GetMovieScene();
+	if (!MovieScene) return CreateErrorResponse(TEXT("MovieScene is null"));
+
+	// Find binding by name
+	const TArray<FMovieSceneBinding>& Bindings = MovieScene->GetBindings();
+	const FMovieSceneBinding* FoundBinding = nullptr;
+	for (const FMovieSceneBinding& Binding : Bindings)
+	{
+		if (Binding.GetName() == BindingName)
+		{
+			FoundBinding = &Binding;
+			break;
+		}
+	}
+
+	if (!FoundBinding)
+	{
+		return CreateErrorResponse(FString::Printf(TEXT("Binding '%s' not found in sequence"), *BindingName));
+	}
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("sequence"), SeqPath);
+	Result->SetStringField(TEXT("binding"), BindingName);
+	Result->SetStringField(TEXT("track_type"), TrackType);
+	Result->SetNumberField(TEXT("frame"), FrameNum);
+	Result->SetStringField(TEXT("value"), Value);
+	Result->SetStringField(TEXT("status"), TEXT("keyframe_added"));
+
+	Sequence->MarkPackageDirty();
+	return CreateSuccessResponse(Result);
+}
+
+// ============================================================================
+// v0.3.0: set_sequencer_keyframe
+// ============================================================================
+
+bool FSetSequencerKeyframeAction::Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError)
+{
+	FString Seq, Bind, Track, Val;
+	if (!GetRequiredString(Params, TEXT("sequence_path"), Seq, OutError)) return false;
+	if (!GetRequiredString(Params, TEXT("binding_name"), Bind, OutError)) return false;
+	if (!GetRequiredString(Params, TEXT("track_type"), Track, OutError)) return false;
+	if (!Params->HasField(TEXT("frame")))
+	{
+		OutError = TEXT("Missing required parameter: frame");
+		return false;
+	}
+	return true;
+}
+
+TSharedPtr<FJsonObject> FSetSequencerKeyframeAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	FString SeqPath = Params->GetStringField(TEXT("sequence_path"));
+	FString BindingName = Params->GetStringField(TEXT("binding_name"));
+	FString TrackType = Params->GetStringField(TEXT("track_type"));
+	int32 FrameNum = static_cast<int32>(Params->GetNumberField(TEXT("frame")));
+	bool bDelete = GetOptionalBool(Params, TEXT("delete"), false);
+
+	FString Error;
+	ULevelSequence* Sequence = FindLevelSequence(SeqPath, Error);
+	if (!Sequence) return CreateErrorResponse(Error);
+
+	UMovieScene* MovieScene = Sequence->GetMovieScene();
+	if (!MovieScene) return CreateErrorResponse(TEXT("MovieScene is null"));
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("sequence"), SeqPath);
+	Result->SetStringField(TEXT("binding"), BindingName);
+	Result->SetNumberField(TEXT("frame"), FrameNum);
+	Result->SetStringField(TEXT("status"), bDelete ? TEXT("keyframe_deleted") : TEXT("keyframe_modified"));
+
+	Sequence->MarkPackageDirty();
+	return CreateSuccessResponse(Result);
+}
+
+// ============================================================================
+// v0.3.0: add_camera_cut_track
+// ============================================================================
+
+bool FAddCameraCutTrackAction::Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError)
+{
+	FString Seq, Cam;
+	if (!GetRequiredString(Params, TEXT("sequence_path"), Seq, OutError)) return false;
+	if (!GetRequiredString(Params, TEXT("camera_name"), Cam, OutError)) return false;
+	return true;
+}
+
+TSharedPtr<FJsonObject> FAddCameraCutTrackAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	FString SeqPath = Params->GetStringField(TEXT("sequence_path"));
+	FString CameraName = Params->GetStringField(TEXT("camera_name"));
+	int32 StartFrame = static_cast<int32>(GetOptionalNumber(Params, TEXT("start_frame"), 0.0));
+	int32 EndFrame = static_cast<int32>(GetOptionalNumber(Params, TEXT("end_frame"), -1.0));
+
+	FString Error;
+	ULevelSequence* Sequence = FindLevelSequence(SeqPath, Error);
+	if (!Sequence) return CreateErrorResponse(Error);
+
+	UMovieScene* MovieScene = Sequence->GetMovieScene();
+	if (!MovieScene) return CreateErrorResponse(TEXT("MovieScene is null"));
+
+	// Find camera actor in the level
+	UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+	if (!World) return CreateErrorResponse(TEXT("No editor world available"));
+
+	AActor* CameraActor = nullptr;
+	for (TActorIterator<AActor> It(World); It; ++It)
+	{
+		if (It->GetActorLabel() == CameraName || It->GetName() == CameraName)
+		{
+			CameraActor = *It;
+			break;
+		}
+	}
+
+	if (!CameraActor)
+	{
+		return CreateErrorResponse(FString::Printf(TEXT("Camera actor '%s' not found in level"), *CameraName));
+	}
+
+	// Add camera cut track
+	UMovieSceneTrack* CameraCutTrack = MovieScene->GetCameraCutTrack();
+	if (!CameraCutTrack)
+	{
+		CameraCutTrack = MovieScene->AddTrack(UMovieSceneCameraCutTrack::StaticClass());
+	}
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("sequence"), SeqPath);
+	Result->SetStringField(TEXT("camera"), CameraName);
+	Result->SetStringField(TEXT("status"), TEXT("camera_cut_track_added"));
+
+	Sequence->MarkPackageDirty();
+	return CreateSuccessResponse(Result);
+}
+
+// ============================================================================
+// v0.3.0: add_sequencer_spawnable
+// ============================================================================
+
+bool FAddSequencerSpawnableAction::Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError)
+{
+	FString Seq, BP;
+	if (!GetRequiredString(Params, TEXT("sequence_path"), Seq, OutError)) return false;
+	if (!GetRequiredString(Params, TEXT("blueprint"), BP, OutError)) return false;
+	return true;
+}
+
+TSharedPtr<FJsonObject> FAddSequencerSpawnableAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	FString SeqPath = Params->GetStringField(TEXT("sequence_path"));
+	FString BlueprintPath = Params->GetStringField(TEXT("blueprint"));
+	FString SpawnableName = GetOptionalString(Params, TEXT("name"));
+
+	FString Error;
+	ULevelSequence* Sequence = FindLevelSequence(SeqPath, Error);
+	if (!Sequence) return CreateErrorResponse(Error);
+
+	UMovieScene* MovieScene = Sequence->GetMovieScene();
+	if (!MovieScene) return CreateErrorResponse(TEXT("MovieScene is null"));
+
+	// Load the blueprint
+	UObject* BPObj = StaticLoadObject(UObject::StaticClass(), nullptr, *BlueprintPath);
+	if (!BPObj)
+	{
+		return CreateErrorResponse(FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath));
+	}
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("sequence"), SeqPath);
+	Result->SetStringField(TEXT("blueprint"), BlueprintPath);
+	Result->SetStringField(TEXT("name"), SpawnableName.IsEmpty() ? BPObj->GetName() : SpawnableName);
+	Result->SetStringField(TEXT("status"), TEXT("spawnable_added"));
+
+	Sequence->MarkPackageDirty();
+	return CreateSuccessResponse(Result);
+}
+
+// ============================================================================
+// v0.3.0: play_sequence_preview
+// ============================================================================
+
+bool FPlaySequencePreviewAction::Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError)
+{
+	FString Seq;
+	return GetRequiredString(Params, TEXT("sequence_path"), Seq, OutError);
+}
+
+TSharedPtr<FJsonObject> FPlaySequencePreviewAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	FString SeqPath = Params->GetStringField(TEXT("sequence_path"));
+	FString Action = GetOptionalString(Params, TEXT("action"), TEXT("play"));
+
+	FString Error;
+	ULevelSequence* Sequence = FindLevelSequence(SeqPath, Error);
+	if (!Sequence) return CreateErrorResponse(Error);
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("sequence"), SeqPath);
+	Result->SetStringField(TEXT("action"), Action);
+	Result->SetStringField(TEXT("status"), FString::Printf(TEXT("preview_%s"), *Action));
 
 	return CreateSuccessResponse(Result);
 }

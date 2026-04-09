@@ -14,7 +14,7 @@ class UNiagaraEmitter;
 // ============================================================================
 
 /**
- * FNiagaraAction â€?Base class for Niagara actions with common helpers.
+ * FNiagaraAction ï¿½?Base class for Niagara actions with common helpers.
  */
 class UECLITOOL_API FNiagaraAction : public FEditorAction
 {
@@ -92,5 +92,50 @@ public:
 protected:
 	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override { return true; }
 	virtual FString GetActionName() const override { return TEXT("get_niagara_modules"); }
+	virtual bool RequiresSave() const override { return false; }
+};
+
+// ============================================================================
+// v0.3.0: Niagara Enhanced Actions
+// ============================================================================
+
+/** Add a module to a Niagara Emitter stage. */
+class UECLITOOL_API FAddNiagaraModuleAction : public FNiagaraAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
+	virtual FString GetActionName() const override { return TEXT("add_niagara_module"); }
+};
+
+/** Remove a module from a Niagara Emitter. */
+class UECLITOOL_API FRemoveNiagaraModuleAction : public FNiagaraAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
+	virtual FString GetActionName() const override { return TEXT("remove_niagara_module"); }
+};
+
+/** Configure a Niagara Emitter renderer. */
+class UECLITOOL_API FSetNiagaraRendererAction : public FNiagaraAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
+	virtual FString GetActionName() const override { return TEXT("set_niagara_renderer"); }
+};
+
+/** Describe a single Niagara Emitter in detail. */
+class UECLITOOL_API FDescribeNiagaraEmitterAction : public FNiagaraAction
+{
+public:
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+protected:
+	virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
+	virtual FString GetActionName() const override { return TEXT("describe_niagara_emitter"); }
 	virtual bool RequiresSave() const override { return false; }
 };

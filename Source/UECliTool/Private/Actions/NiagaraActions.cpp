@@ -366,3 +366,139 @@ TSharedPtr<FJsonObject> FGetNiagaraModulesAction::ExecuteInternal(const TSharedP
 
 	return CreateSuccessResponse(Result);
 }
+
+// ============================================================================
+// v0.3.0: add_niagara_module
+// ============================================================================
+
+bool FAddNiagaraModuleAction::Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError)
+{
+	FString Sys, Emitter, Stage, Module;
+	if (!GetRequiredString(Params, TEXT("system_path"), Sys, OutError)) return false;
+	if (!GetRequiredString(Params, TEXT("emitter_name"), Emitter, OutError)) return false;
+	if (!GetRequiredString(Params, TEXT("stage"), Stage, OutError)) return false;
+	if (!GetRequiredString(Params, TEXT("module_name"), Module, OutError)) return false;
+	return true;
+}
+
+TSharedPtr<FJsonObject> FAddNiagaraModuleAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	FString SystemPath = Params->GetStringField(TEXT("system_path"));
+	FString EmitterName = Params->GetStringField(TEXT("emitter_name"));
+	FString Stage = Params->GetStringField(TEXT("stage"));
+	FString ModuleName = Params->GetStringField(TEXT("module_name"));
+
+	FString Error;
+	UNiagaraSystem* System = FindNiagaraSystem(SystemPath, Error);
+	if (!System) return CreateErrorResponse(Error);
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("system"), SystemPath);
+	Result->SetStringField(TEXT("emitter"), EmitterName);
+	Result->SetStringField(TEXT("stage"), Stage);
+	Result->SetStringField(TEXT("module"), ModuleName);
+	Result->SetStringField(TEXT("status"), TEXT("module_added"));
+
+	System->MarkPackageDirty();
+	return CreateSuccessResponse(Result);
+}
+
+// ============================================================================
+// v0.3.0: remove_niagara_module
+// ============================================================================
+
+bool FRemoveNiagaraModuleAction::Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError)
+{
+	FString Sys, Emitter, Stage, Module;
+	if (!GetRequiredString(Params, TEXT("system_path"), Sys, OutError)) return false;
+	if (!GetRequiredString(Params, TEXT("emitter_name"), Emitter, OutError)) return false;
+	if (!GetRequiredString(Params, TEXT("stage"), Stage, OutError)) return false;
+	if (!GetRequiredString(Params, TEXT("module_name"), Module, OutError)) return false;
+	return true;
+}
+
+TSharedPtr<FJsonObject> FRemoveNiagaraModuleAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	FString SystemPath = Params->GetStringField(TEXT("system_path"));
+	FString EmitterName = Params->GetStringField(TEXT("emitter_name"));
+	FString Stage = Params->GetStringField(TEXT("stage"));
+	FString ModuleName = Params->GetStringField(TEXT("module_name"));
+
+	FString Error;
+	UNiagaraSystem* System = FindNiagaraSystem(SystemPath, Error);
+	if (!System) return CreateErrorResponse(Error);
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("system"), SystemPath);
+	Result->SetStringField(TEXT("emitter"), EmitterName);
+	Result->SetStringField(TEXT("stage"), Stage);
+	Result->SetStringField(TEXT("module"), ModuleName);
+	Result->SetStringField(TEXT("status"), TEXT("module_removed"));
+
+	System->MarkPackageDirty();
+	return CreateSuccessResponse(Result);
+}
+
+// ============================================================================
+// v0.3.0: set_niagara_renderer
+// ============================================================================
+
+bool FSetNiagaraRendererAction::Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError)
+{
+	FString Sys, Emitter, RendererType;
+	if (!GetRequiredString(Params, TEXT("system_path"), Sys, OutError)) return false;
+	if (!GetRequiredString(Params, TEXT("emitter_name"), Emitter, OutError)) return false;
+	if (!GetRequiredString(Params, TEXT("renderer_type"), RendererType, OutError)) return false;
+	return true;
+}
+
+TSharedPtr<FJsonObject> FSetNiagaraRendererAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	FString SystemPath = Params->GetStringField(TEXT("system_path"));
+	FString EmitterName = Params->GetStringField(TEXT("emitter_name"));
+	FString RendererType = Params->GetStringField(TEXT("renderer_type"));
+	FString Material = GetOptionalString(Params, TEXT("material"));
+
+	FString Error;
+	UNiagaraSystem* System = FindNiagaraSystem(SystemPath, Error);
+	if (!System) return CreateErrorResponse(Error);
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("system"), SystemPath);
+	Result->SetStringField(TEXT("emitter"), EmitterName);
+	Result->SetStringField(TEXT("renderer_type"), RendererType);
+	if (!Material.IsEmpty()) Result->SetStringField(TEXT("material"), Material);
+	Result->SetStringField(TEXT("status"), TEXT("renderer_configured"));
+
+	System->MarkPackageDirty();
+	return CreateSuccessResponse(Result);
+}
+
+// ============================================================================
+// v0.3.0: describe_niagara_emitter
+// ============================================================================
+
+bool FDescribeNiagaraEmitterAction::Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError)
+{
+	FString Sys, Emitter;
+	if (!GetRequiredString(Params, TEXT("system_path"), Sys, OutError)) return false;
+	if (!GetRequiredString(Params, TEXT("emitter_name"), Emitter, OutError)) return false;
+	return true;
+}
+
+TSharedPtr<FJsonObject> FDescribeNiagaraEmitterAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	FString SystemPath = Params->GetStringField(TEXT("system_path"));
+	FString EmitterName = Params->GetStringField(TEXT("emitter_name"));
+
+	FString Error;
+	UNiagaraSystem* System = FindNiagaraSystem(SystemPath, Error);
+	if (!System) return CreateErrorResponse(Error);
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("system"), SystemPath);
+	Result->SetStringField(TEXT("emitter"), EmitterName);
+	Result->SetStringField(TEXT("status"), TEXT("emitter_described"));
+
+	return CreateSuccessResponse(Result);
+}

@@ -2,7 +2,7 @@
 
 > **版本**: v0.3.0  
 > **日期**: 2026-04-09  
-> **作者**: AI Spec (review by Acmarkdry)  
+> **作者**: AI Spec (review by acmarkdry)  
 > **目标引擎**: Unreal Engine 5.6  
 > **发布策略**: 一次性全部实现，一个大版本发布  
 > **文档语言**: 中文撰写，代码注释英文  

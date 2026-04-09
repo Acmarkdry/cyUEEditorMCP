@@ -7,9 +7,14 @@
 #include "Engine/LevelStreaming.h"
 #include "GameFramework/WorldSettings.h"
 #include "GameFramework/GameModeBase.h"
+#include "GameFramework/Actor.h"
 #include "Misc/AutomationTest.h"
 #include "HAL/PlatformMemory.h"
 #include "GenericPlatform/GenericPlatformMemory.h"
+#include "FileHelpers.h"
+#include "Misc/PackageName.h"
+#include "EngineUtils.h"
+#include "HAL/PlatformFileManager.h"
 
 // ============================================================================
 // P10: Testing — run_automation_test
@@ -226,6 +231,206 @@ TSharedPtr<FJsonObject> FGetMemoryStatsAction::ExecuteInternal(const TSharedPtr<
 	Result->SetNumberField(TEXT("peak_used_physical_mb"), MemStats.PeakUsedPhysical / (1024.0 * 1024.0));
 	Result->SetNumberField(TEXT("used_virtual_mb"), MemStats.UsedVirtual / (1024.0 * 1024.0));
 	Result->SetNumberField(TEXT("peak_used_virtual_mb"), MemStats.PeakUsedVirtual / (1024.0 * 1024.0));
+
+	return CreateSuccessResponse(Result);
+}
+
+// ============================================================================
+// v0.3.0: Level — load_level
+// ============================================================================
+
+bool FLoadLevelAction::Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError)
+{
+	FString Path;
+	return GetRequiredString(Params, TEXT("level_path"), Path, OutError);
+}
+
+TSharedPtr<FJsonObject> FLoadLevelAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	FString LevelPath = Params->GetStringField(TEXT("level_path"));
+	bool bSaveCurrent = GetOptionalBool(Params, TEXT("save_current"), true);
+
+	if (!GEditor)
+	{
+		return CreateErrorResponse(TEXT("Editor not available"));
+	}
+
+	// Save current level if requested
+	if (bSaveCurrent)
+	{
+		FEditorFileUtils::SaveDirtyPackages(false, true, true);
+	}
+
+	// Check if the map exists
+	FString MapFilename;
+	if (!FPackageName::TryConvertLongPackageNameToFilename(LevelPath, MapFilename, FPackageName::GetMapPackageExtension()))
+	{
+		return CreateErrorResponse(FString::Printf(TEXT("Invalid level path: %s"), *LevelPath));
+	}
+
+	if (!FPlatformFileManager::Get().GetPlatformFile().FileExists(*MapFilename))
+	{
+		return CreateErrorResponse(FString::Printf(TEXT("Level not found: %s"), *LevelPath));
+	}
+
+	// Load the map
+	bool bLoaded = FEditorFileUtils::LoadMap(LevelPath);
+	if (!bLoaded)
+	{
+		return CreateErrorResponse(FString::Printf(TEXT("Failed to load level: %s"), *LevelPath));
+	}
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("level_path"), LevelPath);
+	Result->SetStringField(TEXT("status"), TEXT("loaded"));
+
+	return CreateSuccessResponse(Result);
+}
+
+// ============================================================================
+// v0.3.0: Level — create_sublevel
+// ============================================================================
+
+bool FCreateSublevelAction::Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError)
+{
+	FString Name;
+	return GetRequiredString(Params, TEXT("sublevel_name"), Name, OutError);
+}
+
+TSharedPtr<FJsonObject> FCreateSublevelAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	FString SublevelName = Params->GetStringField(TEXT("sublevel_name"));
+
+	UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+	if (!World)
+	{
+		return CreateErrorResponse(TEXT("No editor world available"));
+	}
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("sublevel_name"), SublevelName);
+	Result->SetStringField(TEXT("world"), World->GetName());
+	Result->SetStringField(TEXT("status"), TEXT("sublevel_created"));
+
+	return CreateSuccessResponse(Result);
+}
+
+// ============================================================================
+// v0.3.0: Level — set_world_settings
+// ============================================================================
+
+TSharedPtr<FJsonObject> FSetWorldSettingsAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+	if (!World)
+	{
+		return CreateErrorResponse(TEXT("No editor world available"));
+	}
+
+	AWorldSettings* Settings = World->GetWorldSettings();
+	if (!Settings)
+	{
+		return CreateErrorResponse(TEXT("WorldSettings not found"));
+	}
+
+	Settings->Modify();
+
+	TArray<FString> Changed;
+
+	if (Params->HasField(TEXT("kill_z")))
+	{
+		Settings->KillZ = Params->GetNumberField(TEXT("kill_z"));
+		Changed.Add(TEXT("kill_z"));
+	}
+
+	if (Params->HasField(TEXT("game_mode")))
+	{
+		FString GameModePath = Params->GetStringField(TEXT("game_mode"));
+		UClass* GMClass = StaticLoadClass(AGameModeBase::StaticClass(), nullptr, *GameModePath);
+		if (GMClass)
+		{
+			Settings->DefaultGameMode = GMClass;
+			Changed.Add(TEXT("game_mode"));
+		}
+	}
+
+	World->MarkPackageDirty();
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("world"), World->GetName());
+
+	TArray<TSharedPtr<FJsonValue>> ChangedArray;
+	for (const FString& C : Changed)
+	{
+		ChangedArray.Add(MakeShared<FJsonValueString>(C));
+	}
+	Result->SetArrayField(TEXT("changed_fields"), ChangedArray);
+
+	return CreateSuccessResponse(Result);
+}
+
+// ============================================================================
+// v0.3.0: Level — get_level_bounds
+// ============================================================================
+
+TSharedPtr<FJsonObject> FGetLevelBoundsAction::ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context)
+{
+	UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+	if (!World)
+	{
+		return CreateErrorResponse(TEXT("No editor world available"));
+	}
+
+	FBox WorldBounds(ForceInit);
+	int32 ActorCount = 0;
+
+	for (TActorIterator<AActor> It(World); It; ++It)
+	{
+		AActor* Actor = *It;
+		if (!Actor || Actor->IsA<AWorldSettings>()) continue;
+
+		FBox ActorBounds = Actor->GetComponentsBoundingBox(true);
+		if (ActorBounds.IsValid)
+		{
+			WorldBounds += ActorBounds;
+			ActorCount++;
+		}
+	}
+
+	TSharedPtr<FJsonObject> Result = MakeShared<FJsonObject>();
+	Result->SetNumberField(TEXT("actor_count"), ActorCount);
+
+	if (WorldBounds.IsValid)
+	{
+		FVector Origin = WorldBounds.GetCenter();
+		FVector Extent = WorldBounds.GetExtent();
+		FVector Min = WorldBounds.Min;
+		FVector Max = WorldBounds.Max;
+
+		TSharedPtr<FJsonObject> OriginObj = MakeShared<FJsonObject>();
+		OriginObj->SetNumberField(TEXT("x"), Origin.X);
+		OriginObj->SetNumberField(TEXT("y"), Origin.Y);
+		OriginObj->SetNumberField(TEXT("z"), Origin.Z);
+		Result->SetObjectField(TEXT("origin"), OriginObj);
+
+		TSharedPtr<FJsonObject> ExtentObj = MakeShared<FJsonObject>();
+		ExtentObj->SetNumberField(TEXT("x"), Extent.X);
+		ExtentObj->SetNumberField(TEXT("y"), Extent.Y);
+		ExtentObj->SetNumberField(TEXT("z"), Extent.Z);
+		Result->SetObjectField(TEXT("extent"), ExtentObj);
+
+		TSharedPtr<FJsonObject> MinObj = MakeShared<FJsonObject>();
+		MinObj->SetNumberField(TEXT("x"), Min.X);
+		MinObj->SetNumberField(TEXT("y"), Min.Y);
+		MinObj->SetNumberField(TEXT("z"), Min.Z);
+		Result->SetObjectField(TEXT("min"), MinObj);
+
+		TSharedPtr<FJsonObject> MaxObj = MakeShared<FJsonObject>();
+		MaxObj->SetNumberField(TEXT("x"), Max.X);
+		MaxObj->SetNumberField(TEXT("y"), Max.Y);
+		MaxObj->SetNumberField(TEXT("z"), Max.Z);
+		Result->SetObjectField(TEXT("max"), MaxObj);
+	}
 
 	return CreateSuccessResponse(Result);
 }

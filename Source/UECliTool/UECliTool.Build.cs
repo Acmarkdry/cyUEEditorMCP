@@ -54,6 +54,7 @@ public class UECliTool : ModuleRules
 			"LevelSequence",                // P8: LevelSequence asset type
 			"MovieScene",                   // P8: MovieScene tracks, sections, bindings
 			"MovieSceneTracks",             // P8: Concrete track types (Transform, Float, etc.)
+			"LiveCoding",                   // v0.3.0: ILiveCodingModule for Live Coding actions
 		});
 
 		// Ensure proper RTTI/exceptions for crash handling

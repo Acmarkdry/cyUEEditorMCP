@@ -18,6 +18,11 @@
 #include "Actions/DataTableActions.h"
 #include "Actions/SequencerActions.h"
 #include "Actions/ExtendedActions.h"
+#include "Actions/AssetManagementActions.h"
+#include "Actions/ReflectionActions.h"
+#include "Actions/ContentBrowserActions.h"
+#include "Actions/DebugActions.h"
+#include "Actions/LiveCodingActions.h"
 #include "Async/Async.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
@@ -386,6 +391,68 @@ void UMCPBridge::RegisterActions()
 	// =========================================================================
 	ActionHandlers.Add(TEXT("get_frame_stats"), MakeShared<FGetFrameStatsAction>());
 	ActionHandlers.Add(TEXT("get_memory_stats"), MakeShared<FGetMemoryStatsAction>());
+
+	// =========================================================================
+	// v0.3.0: Asset Management Enhanced Actions
+	// =========================================================================
+	ActionHandlers.Add(TEXT("duplicate_asset"), MakeShared<FDuplicateAssetAction>());
+	ActionHandlers.Add(TEXT("delete_asset"), MakeShared<FDeleteAssetAction>());
+	ActionHandlers.Add(TEXT("move_asset"), MakeShared<FMoveAssetAction>());
+	ActionHandlers.Add(TEXT("fix_redirectors"), MakeShared<FFixRedirectorsAction>());
+
+	// =========================================================================
+	// v0.3.0: C++ Class Reflection Query Actions
+	// =========================================================================
+	ActionHandlers.Add(TEXT("list_classes"), MakeShared<FListClassesAction>());
+	ActionHandlers.Add(TEXT("get_class_properties"), MakeShared<FGetClassPropertiesAction>());
+	ActionHandlers.Add(TEXT("get_class_functions"), MakeShared<FGetClassFunctionsAction>());
+
+	// =========================================================================
+	// v0.3.0: Content Browser Enhanced Actions
+	// =========================================================================
+	ActionHandlers.Add(TEXT("create_folder"), MakeShared<FCreateFolderAction>());
+	ActionHandlers.Add(TEXT("get_asset_references"), MakeShared<FGetAssetReferencesAction>());
+	ActionHandlers.Add(TEXT("validate_assets"), MakeShared<FValidateAssetsAction>());
+
+	// =========================================================================
+	// v0.3.0: Sequencer Enhanced Actions
+	// =========================================================================
+	ActionHandlers.Add(TEXT("add_sequencer_keyframe"), MakeShared<FAddSequencerKeyframeAction>());
+	ActionHandlers.Add(TEXT("set_sequencer_keyframe"), MakeShared<FSetSequencerKeyframeAction>());
+	ActionHandlers.Add(TEXT("add_camera_cut_track"), MakeShared<FAddCameraCutTrackAction>());
+	ActionHandlers.Add(TEXT("add_sequencer_spawnable"), MakeShared<FAddSequencerSpawnableAction>());
+	ActionHandlers.Add(TEXT("play_sequence_preview"), MakeShared<FPlaySequencePreviewAction>());
+
+	// =========================================================================
+	// v0.3.0: Level/World Enhanced Actions
+	// =========================================================================
+	ActionHandlers.Add(TEXT("load_level"), MakeShared<FLoadLevelAction>());
+	ActionHandlers.Add(TEXT("create_sublevel"), MakeShared<FCreateSublevelAction>());
+	ActionHandlers.Add(TEXT("set_world_settings"), MakeShared<FSetWorldSettingsAction>());
+	ActionHandlers.Add(TEXT("get_level_bounds"), MakeShared<FGetLevelBoundsAction>());
+
+	// =========================================================================
+	// v0.3.0: Blueprint Debug Actions
+	// =========================================================================
+	ActionHandlers.Add(TEXT("set_breakpoint"), MakeShared<FSetBreakpointAction>());
+	ActionHandlers.Add(TEXT("list_breakpoints"), MakeShared<FListBreakpointsAction>());
+	ActionHandlers.Add(TEXT("get_watch_values"), MakeShared<FGetWatchValuesAction>());
+	ActionHandlers.Add(TEXT("debug_step"), MakeShared<FDebugStepAction>());
+
+	// =========================================================================
+	// v0.3.0: Niagara Enhanced Actions
+	// =========================================================================
+	ActionHandlers.Add(TEXT("add_niagara_module"), MakeShared<FAddNiagaraModuleAction>());
+	ActionHandlers.Add(TEXT("remove_niagara_module"), MakeShared<FRemoveNiagaraModuleAction>());
+	ActionHandlers.Add(TEXT("set_niagara_renderer"), MakeShared<FSetNiagaraRendererAction>());
+	ActionHandlers.Add(TEXT("describe_niagara_emitter"), MakeShared<FDescribeNiagaraEmitterAction>());
+
+	// =========================================================================
+	// v0.3.0: Live Coding Actions
+	// =========================================================================
+	ActionHandlers.Add(TEXT("trigger_live_coding"), MakeShared<FTriggerLiveCodingAction>());
+	ActionHandlers.Add(TEXT("get_live_coding_status"), MakeShared<FGetLiveCodingStatusAction>());
+	ActionHandlers.Add(TEXT("enable_live_coding"), MakeShared<FEnableLiveCodingAction>());
 
 	UE_LOG(LogMCP, Log, TEXT("UEEditorMCP: Registered %d action handlers"), ActionHandlers.Num());
 }

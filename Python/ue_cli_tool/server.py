@@ -22,7 +22,8 @@ from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent, ImageContent
 
 from .cli_parser import CliParser
-from .connection import get_connection, CommandResult, TimeoutTier
+from .config import ProjectConfig, load_config
+from .connection import get_connection, ConnectionConfig, CommandResult, TimeoutTier
 from .context import ContextStore
 from .registry import get_registry
 from .skills import get_skill_list, load_skill
@@ -37,6 +38,7 @@ _MAX_BATCH = 50
 # ──── state ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 _context_store: ContextStore | None = None
+_project_config: ProjectConfig | None = None
 _command_log: deque[dict] = deque(maxlen=_LOG_BUFFER_SIZE)
 _cli_parser: CliParser | None = None
 
@@ -376,6 +378,16 @@ def _handle_query(args: dict) -> Any:
 	if sub == "context":
 		if _context_store is not None:
 			payload = _context_store.get_resume_payload()
+			# Enrich with project config paths and compile command template
+			if _project_config is not None:
+				payload["engine_root"] = _project_config.engine_root
+				payload["project_root"] = _project_config.project_root
+				if _project_config.engine_root and _project_config.project_root:
+					payload["compile_command"] = (
+						f'"{_project_config.engine_root}/Engine/Build/BatchFiles/RunUAT.bat"'
+						f" BuildCookRun"
+						f' -project="{_project_config.project_root}"'
+					)
 			return {"success": True, **payload}
 		# Fallback: get context from C++
 		return _send_command("get_context")
@@ -632,10 +644,15 @@ def _handle_logs(rest: str) -> dict:
 
 async def _run():
 	global _context_store
+	global _project_config
+
+	# Load project configuration (searches upward for ue_mcp_config.yaml)
+	_project_config = load_config()
 
 	logger.info(
-		"Starting ue-cli-tool server (%d actions registered)",
+		"Starting ue-cli-tool server (%d actions registered, tcp_port=%d)",
 		get_registry().count,
+		_project_config.tcp_port,
 	)
 
 	# Init context store
@@ -643,8 +660,16 @@ async def _run():
 	_context_store = ContextStore(ctx_dir)
 	atexit.register(_context_store.shutdown)
 
-	# Connect to Unreal
-	conn = get_connection()
+	# Inject engine/project paths into context store session
+	if _project_config.engine_root or _project_config.project_root:
+		_context_store.set_project_paths(
+			engine_root=_project_config.engine_root,
+			project_root=_project_config.project_root,
+		)
+
+	# Connect to Unreal using tcp_port from config
+	conn_config = ConnectionConfig(port=_project_config.tcp_port)
+	conn = get_connection(config=conn_config)
 	conn.on_state_change = _context_store._on_ue_state_change
 	conn.connect()
 

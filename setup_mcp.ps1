@@ -157,6 +157,46 @@ $version = & $UEPython --version 2>&1
 Write-Host "  Version: $version" -ForegroundColor Green
 Write-Host ""
 
+# --- Write ue_mcp_config.yaml ---
+# Derive engine root from the discovered Python path if not explicitly provided.
+# UE Python lives at: <EngineRoot>/Engine/Binaries/ThirdParty/Python3/Win64/python.exe
+if ($EngineRoot -ne "") {
+    $detectedEngineRoot = $EngineRoot
+} else {
+    $detectedEngineRoot = (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $UEPython))))))
+}
+
+$configPath = Join-Path $ProjectRoot "ue_mcp_config.yaml"
+$newValues = @{
+    engine_root  = $detectedEngineRoot.Replace('\', '/')
+    project_root = $ProjectRoot.Replace('\', '/')
+}
+
+if (Test-Path $configPath) {
+    # Merge with existing config — preserve user-added keys (tcp_port, lua_script_dirs, etc.)
+    Write-Host "  Merging into existing $configPath ..." -ForegroundColor DarkGray
+    $existingContent = Get-Content $configPath -Raw -Encoding UTF8
+    foreach ($key in $newValues.Keys) {
+        $val = $newValues[$key]
+        if ($existingContent -match "(?m)^\s*${key}\s*:") {
+            # Replace existing key's value (single-line values only)
+            $existingContent = $existingContent -replace "(?m)^(\s*${key}\s*:\s*).*$", "`${1}$val"
+        } else {
+            # Append new key at the end
+            $existingContent = $existingContent.TrimEnd() + "`n${key}: $val`n"
+        }
+    }
+    $yamlContent = $existingContent
+} else {
+    Write-Host "  Creating $configPath ..." -ForegroundColor DarkGray
+    $yamlContent = ($newValues.GetEnumerator() | ForEach-Object { "$($_.Key): $($_.Value)" }) -join "`n"
+    $yamlContent += "`n"
+}
+
+[System.IO.File]::WriteAllText($configPath, $yamlContent, [System.Text.UTF8Encoding]::new($false))
+Write-Host "  Config written: $configPath" -ForegroundColor Green
+Write-Host ""
+
 # --- Step 2: Create virtual environment ---
 Write-Host "[2/4] Creating virtual environment..." -ForegroundColor Yellow
 

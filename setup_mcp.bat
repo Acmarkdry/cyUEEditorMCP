@@ -110,6 +110,72 @@ echo.
 for /f "delims=" %%v in ('"!UE_PYTHON!" --version 2^>^&1') do echo   Python version: %%v
 echo.
 
+REM --- Write ue_mcp_config.yaml ---
+REM Derive engine root from UE_PYTHON path or command-line argument.
+REM UE Python lives at: <EngineRoot>\Engine\Binaries\ThirdParty\Python3\Win64\python.exe
+if not "%~1"=="" (
+    set "DETECTED_ENGINE_ROOT=%~1"
+) else (
+    for %%P in ("!UE_PYTHON!") do set "_P1=%%~dpP"
+    for %%P in ("!_P1!..") do set "_P2=%%~fP"
+    for %%P in ("!_P2!..") do set "_P3=%%~fP"
+    for %%P in ("!_P3!..") do set "_P4=%%~fP"
+    for %%P in ("!_P4!..") do set "_P5=%%~fP"
+    for %%P in ("!_P5!..") do set "DETECTED_ENGINE_ROOT=%%~fP"
+)
+REM Remove trailing backslash if present
+if "!DETECTED_ENGINE_ROOT:~-1!"=="\" set "DETECTED_ENGINE_ROOT=!DETECTED_ENGINE_ROOT:~0,-1!"
+
+REM Convert backslashes to forward slashes
+set "ENGINE_ROOT_FWD=!DETECTED_ENGINE_ROOT:\=/!"
+set "PROJECT_ROOT_CLEAN=%PROJECT_ROOT%"
+if "!PROJECT_ROOT_CLEAN:~-1!"=="\" set "PROJECT_ROOT_CLEAN=!PROJECT_ROOT_CLEAN:~0,-1!"
+set "PROJECT_ROOT_FWD=!PROJECT_ROOT_CLEAN:\=/!"
+
+set "CONFIG_PATH=%PROJECT_ROOT%ue_mcp_config.yaml"
+
+if exist "!CONFIG_PATH!" (
+    echo   Merging into existing !CONFIG_PATH! ...
+    REM Read existing file, update engine_root and project_root, preserve other keys
+    set "FOUND_ENGINE_ROOT=0"
+    set "FOUND_PROJECT_ROOT=0"
+    set "TMPCONFIG=!CONFIG_PATH!.tmp"
+    REM Clear temp file
+    type nul > "!TMPCONFIG!"
+    for /f "usebackq delims=" %%L in ("!CONFIG_PATH!") do (
+        set "LINE=%%L"
+        REM Check if line starts with engine_root:
+        echo !LINE! | findstr /b /c:"engine_root:" >nul 2>&1
+        if !ERRORLEVEL! equ 0 (
+            >> "!TMPCONFIG!" echo engine_root: !ENGINE_ROOT_FWD!
+            set "FOUND_ENGINE_ROOT=1"
+        ) else (
+            REM Check if line starts with project_root:
+            echo !LINE! | findstr /b /c:"project_root:" >nul 2>&1
+            if !ERRORLEVEL! equ 0 (
+                >> "!TMPCONFIG!" echo project_root: !PROJECT_ROOT_FWD!
+                set "FOUND_PROJECT_ROOT=1"
+            ) else (
+                >> "!TMPCONFIG!" echo !LINE!
+            )
+        )
+    )
+    REM Append any keys that were not found in the existing file
+    if "!FOUND_ENGINE_ROOT!"=="0" (
+        >> "!TMPCONFIG!" echo engine_root: !ENGINE_ROOT_FWD!
+    )
+    if "!FOUND_PROJECT_ROOT!"=="0" (
+        >> "!TMPCONFIG!" echo project_root: !PROJECT_ROOT_FWD!
+    )
+    move /y "!TMPCONFIG!" "!CONFIG_PATH!" >nul
+) else (
+    echo   Creating !CONFIG_PATH! ...
+    > "!CONFIG_PATH!" echo engine_root: !ENGINE_ROOT_FWD!
+    >> "!CONFIG_PATH!" echo project_root: !PROJECT_ROOT_FWD!
+)
+echo   Config written: !CONFIG_PATH!
+echo.
+
 REM --- Step 2: Create virtual environment ---
 echo [2/4] Creating virtual environment...
 

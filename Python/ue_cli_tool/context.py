@@ -370,6 +370,22 @@ class ContextStore:
 
 	# ──── UE connection state callback ────────────────────────────────────────────────────────────────
 
+	def set_project_paths(
+		self,
+		engine_root: str | None = None,
+		project_root: str | None = None,
+	) -> None:
+		"""Store engine and project root paths in the session metadata.
+
+		Called once during startup after loading :class:`ProjectConfig`.
+		"""
+		with self._lock:
+			if engine_root is not None:
+				self._session["engine_root"] = engine_root
+			if project_root is not None:
+				self._session["project_root"] = project_root
+			self._save_session()
+
 	def _on_ue_state_change(
 		self, new_state: str, old_state: str, ts: str | None = None
 	) -> None:

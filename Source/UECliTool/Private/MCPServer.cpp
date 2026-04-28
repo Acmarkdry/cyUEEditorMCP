@@ -644,7 +644,8 @@ bool FMCPServer::Start()
 
 	if (!ListenerSocket->Bind(*Addr))
 	{
-		UE_LOG(LogMCP, Error, TEXT("UEEditorMCP: Failed to bind to port %d"), Port);
+		UE_LOG(LogMCP, Error, TEXT("UEEditorMCP: Port %d is already in use. Try -MCPPort=%d or close the other instance using port %d."),
+			Port, Port + 1, Port);
 		SocketSubsystem->DestroySocket(ListenerSocket);
 		ListenerSocket = nullptr;
 		return false;

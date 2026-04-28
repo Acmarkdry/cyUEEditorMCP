@@ -253,6 +253,11 @@ class PersistentUnrealConnection:
 		self._reconnect_attempts = 0
 		# Circuit Breaker
 		self._circuit = CircuitBreaker(self.config.circuit_breaker)
+		# Diagnostics: consecutive command failure tracking
+		self._consecutive_cmd_failures: int = 0
+		self._last_heartbeat_success: bool = True
+		self._last_error: Optional[str] = None
+		self._last_error_time: float = 0.0
 		# Optional callback: (new_state: str, old_state: str, timestamp: str) -> None
 		self.on_state_change: Optional[Callable[[str, str, str], None]] = None
 		# Optional metrics callback: (command, duration_ms, success, error) -> None
@@ -411,16 +416,30 @@ class PersistentUnrealConnection:
 		# Record to circuit breaker (only for transport-level success/failure)
 		if result.success:
 			self._circuit.record_success()
+			self._consecutive_cmd_failures = 0
 		elif result.error and any(
 			kw in (result.error or "")
 			for kw in ("timed out", "Connection lost", "Socket", "not connected")
 		):
 			# Only transport-level errors trip the breaker, not business-logic errors
 			self._circuit.record_failure()
+			self._consecutive_cmd_failures += 1
+			self._last_error = result.error
+			self._last_error_time = time.time()
 		else:
 			# Business-logic failure (e.g., "blueprint not found") —?still a success
 			# for the transport layer, so record success for the breaker.
 			self._circuit.record_success()
+			self._consecutive_cmd_failures += 1
+			self._last_error = result.error
+			self._last_error_time = time.time()
+
+		# Attach health warning when consecutive failures reach 3
+		if self._consecutive_cmd_failures >= 3:
+			result.data["_health_warning"] = (
+				f"Warning: {self._consecutive_cmd_failures} consecutive command failures. "
+				f"Connection may be unstable. Last error: {self._last_error}"
+			)
 
 		# Fire metrics hook
 		self._fire_request_complete(
@@ -637,6 +656,10 @@ class PersistentUnrealConnection:
 			"circuit_breaker": self._circuit.get_status(),
 			"last_activity": self._last_activity,
 			"reconnect_attempts": self._reconnect_attempts,
+			"last_heartbeat_success": self._last_heartbeat_success,
+			"last_error": self._last_error,
+			"last_error_time": self._last_error_time,
+			"consecutive_failures": self._consecutive_cmd_failures,
 			"config": {
 				"host": self.config.host,
 				"port": self.config.port,
@@ -788,10 +811,14 @@ class PersistentUnrealConnection:
 			elapsed = time.time() - self._last_activity
 			if elapsed >= self.config.heartbeat_interval:
 				try:
-					if not self.ping():
+					ping_ok = self.ping()
+					self._last_heartbeat_success = ping_ok
+					if not ping_ok:
 						logger.warning(
 							"Heartbeat ping returned false, marking connection stale"
 						)
+						self._last_error = "Heartbeat ping failed"
+						self._last_error_time = time.time()
 						# Don't reconnect from heartbeat thread - let the next
 						# send_command handle reconnection to avoid blocking
 						with self._lock:
@@ -802,6 +829,9 @@ class PersistentUnrealConnection:
 								self._fire_state_change("crashed", old_state.value)
 				except Exception as e:
 					logger.error(f"Heartbeat error: {e}")
+					self._last_heartbeat_success = False
+					self._last_error = f"Heartbeat error: {e}"
+					self._last_error_time = time.time()
 					with self._lock:
 						if self._state == ConnectionState.CONNECTED:
 							old_state = self._state
@@ -847,15 +877,22 @@ def _wire_metrics(conn: PersistentUnrealConnection) -> None:
 	conn.on_request_complete = collector.record_simple
 
 
-def get_connection() -> PersistentUnrealConnection:
+def get_connection(
+	config: Optional[ConnectionConfig] = None,
+) -> PersistentUnrealConnection:
 	"""Get or create the global connection instance.
+
+	If *config* is provided **and** no connection exists yet, the new
+	connection is created with that config.  If a connection already
+	exists, *config* is ignored (call :func:`reset_connection` first to
+	reconfigure).
 
 	Automatically wires up the global MetricsCollector so every command
 	sent through this connection records timing/success metrics.
 	"""
 	global _global_connection
 	if _global_connection is None:
-		_global_connection = PersistentUnrealConnection()
+		_global_connection = PersistentUnrealConnection(config)
 		_wire_metrics(_global_connection)
 	return _global_connection
 

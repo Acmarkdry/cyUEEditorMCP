@@ -1,5 +1,7 @@
 # cyUECliTool
 
+[English](README.md) | [中文](README.zh-CN.md)
+
 CLI-first AI tool for controlling Unreal Engine Editor.
 
 v0.5.0 moves the model-facing interface away from MCP tool JSON. Codex and

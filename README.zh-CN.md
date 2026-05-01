@@ -203,6 +203,8 @@ cd D:\UnrealGame\Lyra_56\Plugins\UEEditorMCP
 
 ## 致谢
 
+由 Acmarkdry 维护，并由 Codex 辅助开发。
+
 基于 [lilklon/UEBlueprintMCP](https://github.com/lilklon/UEBlueprintMCP)
 （MIT License）。
 

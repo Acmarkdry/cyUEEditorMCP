@@ -213,6 +213,8 @@ Key Python modules:
 
 ## Credits
 
+Maintained by Acmarkdry with Codex-assisted development.
+
 Based on [lilklon/UEBlueprintMCP](https://github.com/lilklon/UEBlueprintMCP)
 (MIT License).
 

@@ -5,7 +5,7 @@
 	"FriendlyName": "UECliTool",
 	"Description": "CLI-first AI tool for controlling Unreal Engine Editor. Based on lilklon/UEBlueprintMCP (MIT).",
 	"Category": "Editor",
-	"CreatedBy": "Acmarkdry (based on lilklon/UEBlueprintMCP)",
+	"CreatedBy": "Acmarkdry and Codex (based on lilklon/UEBlueprintMCP)",
 	"CreatedByURL": "https://github.com/lilklon/UEBlueprintMCP",
 	"DocsURL": "https://github.com/lilklon/UEBlueprintMCP",
 	"MarketplaceURL": "",

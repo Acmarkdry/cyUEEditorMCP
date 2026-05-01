@@ -1,7 +1,7 @@
 # ============================================================================
 #  UECliTool - One-Click Python Setup (PowerShell)
-#  Automatically finds UE engine's built-in Python, creates a venv,
-#  and installs the MCP package. No external Python installation required.
+#  Automatically finds UE engine's built-in Python and creates a venv
+#  for the CLI-first runtime. No external Python installation required.
 # ============================================================================
 
 param(
@@ -34,7 +34,7 @@ if ($EngineRoot -ne "") {
     }
 }
 
-# --- Priority 2: Read .uproject EngineAssociation → Windows Registry ---
+# --- Priority 2: Read .uproject EngineAssociation, then Windows Registry ---
 if (-not $UEPython) {
     $uprojectFiles = Get-ChildItem -Path $ProjectRoot -Filter "*.uproject" -ErrorAction SilentlyContinue
     foreach ($upf in $uprojectFiles) {
@@ -44,7 +44,7 @@ if (-not $UEPython) {
             if ($engineVer) {
                 Write-Host "  Found EngineAssociation: $engineVer" -ForegroundColor DarkGray
 
-                # Try HKLM installed engine (e.g. "5.7" → HKLM\SOFTWARE\EpicGames\Unreal Engine\5.7)
+                # Try HKLM installed engine, for example 5.7 under HKLM\SOFTWARE\EpicGames\Unreal Engine\5.7.
                 $regPath = "HKLM:\SOFTWARE\EpicGames\Unreal Engine\$engineVer"
                 try {
                     $regEntry = Get-ItemProperty $regPath -ErrorAction Stop
@@ -178,7 +178,7 @@ $defaultValues = @{
 }
 
 if (Test-Path $configPath) {
-    # Merge with existing config — preserve user-added keys (tcp_port, lua_script_dirs, etc.)
+    # Merge with existing config; preserve user-added keys (tcp_port, lua_script_dirs, etc.)
     Write-Host "  Merging into existing $configPath ..." -ForegroundColor DarkGray
     $existingContent = Get-Content $configPath -Raw -Encoding UTF8
     foreach ($key in $newValues.Keys) {
@@ -228,25 +228,26 @@ Write-Host "  Created: $VenvDir" -ForegroundColor Green
 Write-Host ""
 
 # --- Step 3: Install dependencies ---
-Write-Host "[3/4] Installing MCP package..." -ForegroundColor Yellow
+Write-Host "[3/4] Installing Python dependencies..." -ForegroundColor Yellow
 
 $pipExe = Join-Path $VenvDir "Scripts\pip.exe"
 $reqFile = Join-Path $PythonDir "requirements.txt"
 $vendorDir = Join-Path $PythonDir "vendor"
 $installed = $false
 
-# 辅助函数：运行 pip 并实时显示输出，带总超时保护
+# Run pip with a process timeout while leaving progress output visible.
 function Invoke-PipInstall {
     param(
         [string]$PipExePath,
         [string[]]$Arguments,
-        [int]$TimeoutSeconds = 600   # 整体进程超时（默认 10 分钟）
+        [int]$TimeoutSeconds = 600
     )
+
     $psi = [System.Diagnostics.ProcessStartInfo]::new()
     $psi.FileName  = $PipExePath
     $psi.Arguments = $Arguments -join ' '
     $psi.UseShellExecute = $false
-    # 不重定向输出，让 pip 直接打印到控制台（进度条 + 日志实时可见）
+    # Do not redirect output; pip progress and logs stay visible.
     $psi.RedirectStandardOutput = $false
     $psi.RedirectStandardError  = $false
 
@@ -256,13 +257,13 @@ function Invoke-PipInstall {
     if (-not $exited) {
         try { $proc.Kill() } catch {}
         Write-Host "  ERROR: pip process timed out after $TimeoutSeconds seconds." -ForegroundColor Red
-        return 124   # 仿 Linux timeout 退出码
+        return 124
     }
 
     return $proc.ExitCode
 }
 
-# 优先离线 vendor 安装（稳定、快速、无网络依赖）
+# Prefer offline vendor wheels first when available.
 if (Test-Path $vendorDir) {
     Write-Host "  Trying offline vendor wheels first..." -ForegroundColor DarkGray
     $offlineArgs = @('install', '-r', "`"$reqFile`"", '--no-index', '--find-links', "`"$vendorDir`"")
@@ -275,7 +276,7 @@ if (Test-Path $vendorDir) {
     }
 }
 
-# 离线失败或无 vendor 目录 → 在线回退
+# Fall back to online install when vendor wheels are unavailable or failed.
 if (-not $installed) {
     Write-Host "  Trying online install (timeout per-socket=120s, process=600s)..." -ForegroundColor DarkGray
     $onlineArgs = @('install', '-r', "`"$reqFile`"", '--retries', '3', '--timeout', '120', '--progress-bar', 'on')
@@ -295,36 +296,18 @@ if (-not $installed) {
 }
 Write-Host ""
 
-# --- Step 4: Generate .vscode/mcp.json ---
-Write-Host "[4/4] Generating .vscode/mcp.json..." -ForegroundColor Yellow
+# --- Step 4: Validate CLI entrypoint ---
+Write-Host "[4/4] Validating CLI-first runtime..." -ForegroundColor Yellow
 
-$venvPython = (Join-Path $VenvDir "Scripts\python.exe").Replace('\', '/')
-$pythonPath = $PythonDir.Replace('\', '/')
-
-# Write JSON directly to avoid PowerShell's ConvertTo-Json alignment quirks
-$mcpJson = @"
-{
-  "servers": {
-    "ue-cli-tool": {
-      "command": "$venvPython",
-      "args": ["-m", "ue_cli_tool.server"],
-      "env": {
-        "PYTHONPATH": "$pythonPath"
-      }
-    }
-  }
-}
-"@
-
-$vscodePath = Join-Path $ProjectRoot ".vscode"
-if (-not (Test-Path $vscodePath)) {
-    New-Item -ItemType Directory -Path $vscodePath -Force | Out-Null
+$venvPython = Join-Path $VenvDir "Scripts\python.exe"
+$ueCli = Join-Path $PythonDir "ue.py"
+& $venvPython $ueCli --help 2>&1 | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  ERROR: CLI entrypoint failed: $ueCli" -ForegroundColor Red
+    exit 1
 }
 
-$mcpJsonPath = Join-Path $vscodePath "mcp.json"
-[System.IO.File]::WriteAllText($mcpJsonPath, $mcpJson, [System.Text.UTF8Encoding]::new($false))
-
-Write-Host "  Generated: $mcpJsonPath" -ForegroundColor Green
+Write-Host "  CLI entrypoint ready: $ueCli" -ForegroundColor Green
 Write-Host ""
 
 Write-Host "============================================" -ForegroundColor Cyan
@@ -334,6 +317,7 @@ Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host " Next steps:" -ForegroundColor Yellow
 Write-Host "   1. Open your UE project in the Editor"
-Write-Host "   2. Open VS Code - ue-cli-tool server will auto-start"
-Write-Host "   3. Use Copilot Chat to control Blueprints"
+Write-Host "   2. Run: `"$venvPython`" `"$ueCli`" doctor"
+Write-Host "   3. Run: `"$venvPython`" `"$ueCli`" query health"
+Write-Host "   4. Install the Codex skill from skills\unreal-ue-cli if needed"
 Write-Host ""

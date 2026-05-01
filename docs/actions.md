@@ -1,62 +1,109 @@
-# 动作域参考
+# Actions
 
-## ue_python_exec
+Use the CLI to discover the live command catalog. Do not copy action syntax from
+static documentation when the registry can answer directly.
 
-`ue_python_exec` 是一个 MCP 工具，可以在 Unreal 的嵌入式 Python 环境中执行任意代码。
-它替代了 45+ 原有 C++ 动作（Actor 管理、蓝图创建/编译、材质操作、视口控制、PIE 等）。
+```powershell
+python .\Python\ue.py query help
+python .\Python\ue.py query "help create_blueprint"
+python .\Python\ue.py query "search material"
+python .\Python\ue.py query skills
+```
+
+## CLI Syntax
+
+```text
+<command> [positional_args...] [--flag value ...]
+@<target>     Set Blueprint/material/widget context
+# comment     Ignored
+```
+
+Examples:
+
+```powershell
+python .\Python\ue.py run "get_context"
+python .\Python\ue.py run "get_blueprint_summary BP_Player --detail_level normal"
+```
+
+Batch with context:
+
+```powershell
+@"
+@BP_Player
+add_blueprint_variable Health --variable_type Float
+compile_blueprint
+"@ | python .\Python\ue.py run
+```
+
+## Domains
+
+The registry currently covers these broad domains:
+
+| Domain | Purpose |
+|--------|---------|
+| `editor.*` | Context, logs, screenshots, PIE, source-control helpers |
+| `asset.*` | Asset discovery, duplication, deletion, rename, redirectors |
+| `blueprint.*` | Blueprint summaries and full snapshots |
+| `graph.*` | Blueprint graph inspection and patching |
+| `node.*` | Blueprint node creation and graph operations |
+| `variable.*` | Blueprint variable management |
+| `function.*` | Blueprint function management |
+| `dispatcher.*` | Event dispatcher management |
+| `layout.*` | Blueprint/material graph layout |
+| `material.*` | Material graph inspection, diagnostics, layout |
+| `widget.*` | UMG widget Blueprint creation, editing, analysis |
+| `animgraph.*` | Animation Blueprint graph inspection and editing |
+| `anim.*` | Animation asset analysis |
+| `niagara.*` | Niagara helpers |
+| `sequencer.*` | Sequencer helpers |
+| `python.*` | Unreal embedded Python execution |
+
+Run `query help` for the authoritative current list.
+
+## Output
+
+Default text output is intended for Codex and humans. It summarizes large
+payloads and includes key fields.
+
+Use JSON explicitly:
+
+```powershell
+python .\Python\ue.py query help --json
+python .\Python\ue.py run "get_context" --json
+```
+
+Use raw mode only for debugging:
+
+```powershell
+python .\Python\ue.py run "get_context" --raw
+```
+
+## Python Execution
+
+Use `python.exec` or its command alias only when the task genuinely needs custom
+Unreal Python. Always set `_result` to return data:
 
 ```python
-# 示例：列出所有关卡 Actor
 import unreal
-_result = [a.get_name() for a in unreal.EditorLevelLibrary.get_all_level_actors()]
+actors = unreal.EditorLevelLibrary.get_all_level_actors()
+_result = [{"name": a.get_name(), "class": a.get_class().get_name()} for a in actors]
 ```
 
-设置 `_result = <value>` 返回数据。详见 [python-api skill](../Python/ue_cli_tool/skills/python-api.md)。
+Prefer dedicated commands for common Blueprint, graph, material, widget, and
+animation workflows because they usually provide better validation and safer
+transactions.
 
-## 动作域（核心）
+## Diagnostics
 
-| 域 | 数量 | 说明 | 示例 ID |
-|----|------|------|--------|
-| `python.*` | 1 | Python 代码执行（替代 45+ C++ 动作） | `python.exec` |
-| `blueprint.*` | 2 | 蓝图内省与完整快照（创建/编译→Python） | `blueprint.get_summary`、`blueprint.describe_full` |
-| `graph.*` | 18 | 图连线、检视、注释、补丁、折叠重构 | `graph.connect_nodes`、`graph.describe`、`graph.apply_patch` |
-| `node.*` | 19 | 蓝图图节点创建 | `node.add_event`、`node.add_function_call`、`node.add_branch` |
-| `variable.*` | 8 | 变量增删改查、默认值、元数据 | `variable.create`、`variable.add_getter`、`variable.set_default` |
-| `function.*` | 4 | 函数创建、管理与重构 | `function.create`、`function.call`、`function.delete`、`function.rename` |
-| `dispatcher.*` | 4 | 事件派发器管理 | `dispatcher.create`、`dispatcher.call`、`dispatcher.bind` |
-| `layout.*` | 4 | 节点自动布局 | `layout.auto_selected`、`layout.auto_subtree`、`layout.auto_blueprint` |
-| `macro.*` | 1 | 宏管理 | `macro.rename` |
-| `material.*` | 14 | 材质分析、诊断、布局（创建/编译→Python） | `material.get_summary`、`material.auto_layout`、`material.diagnose` |
-| `widget.*` | 28 | UMG 控件蓝图（24 种类型）+ MVVM + 分析 | `widget.create`、`widget.add_component`、`widget.describe_full`、`widget.batch_get_styles` |
-| `input.*` | 4 | 增强输入系统 | `input.create_action`、`input.create_mapping_context` |
-| `animgraph.*` | 18 | AnimGraph 读取/创建/修改/编译 | `animgraph.list_graphs`、`animgraph.create_blueprint`、`animgraph.compile` |
-| `anim.*` | 7 | 动画资产分析（Montage/BlendSpace/Notify/Skeleton） | `anim.describe_blueprint_full`、`anim.describe_montage`、`anim.get_skeleton_hierarchy` |
-| `editor.*` | 8 | 日志、缩略图、源码控制 diff（Actor/PIE→Python） | `editor.get_logs`、`editor.diff_against_depot`、`editor.is_ready` |
-
-## AI 工作流
-
-### CLI 语法（推荐）
-
-```
-ue_cli(command="@BP_Player\nadd_blueprint_variable Speed --variable_type Float\nadd_blueprint_event_node ReceiveBeginPlay\ncompile_blueprint")
+```powershell
+python .\Python\ue.py doctor
+python .\Python\ue.py query "logs --n 50 --source editor"
+python .\Python\ue.py query metrics
+python .\Python\ue.py query health
 ```
 
-### 查询
+If a command fails, run:
 
+```powershell
+python .\Python\ue.py query "help <command>"
 ```
-ue_query(query="help add_blueprint_variable")
-ue_query(query="search material")
-ue_query(query="skills")
-```
-
-## 编译诊断
-
-### 蓝图
-
-- 通过 `compile_blueprint` CLI 命令编译
-- 详细日志：`ue_query(query="logs --source editor --category LogBlueprint")`
-
-### 材质
-
-- 使用 `material_diagnose` 检查常见问题
-- 详细日志：`ue_query(query="logs --source editor --category LogMaterial")`

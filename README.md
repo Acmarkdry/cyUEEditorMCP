@@ -202,10 +202,11 @@ Key Python modules:
 
 | Document | Description |
 |----------|-------------|
-| [Installation](docs/installation.md) | Environment setup and legacy MCP setup |
+| [Installation](docs/installation.md) | CLI-first setup and troubleshooting |
 | [Architecture](docs/architecture.md) | Technical details, C++ server, event system, protocols |
 | [Actions](docs/actions.md) | Action domain reference |
 | [Development](docs/development.md) | Adding new actions, tests, commandlet mode |
+| [CLI-first Migration](docs/cli-first-migration.md) | Migration status and remaining compatibility notes |
 | [GitHub Actions Runner](docs/github-actions-runner.md) | Self-hosted Windows runner setup |
 
 ## Credits

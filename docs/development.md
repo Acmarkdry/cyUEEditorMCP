@@ -1,134 +1,123 @@
-# 开发指南
+# Development
 
-## 新增动作
+UECliTool v0.5.0 is CLI-first at the model boundary while preserving the C++
+editor bridge and action registry.
 
-### 第 1 步：C++ 实现
+## Add A New Editor Action
+
+1. Add a C++ `FEditorAction` subclass.
+2. Register it in `MCPBridge.cpp`.
+3. Add a Python `ActionDef` in `Python/ue_cli_tool/registry/actions.py`.
+4. Verify discovery through `Python/ue.py query`.
+
+Example C++ skeleton:
 
 ```cpp
-// Source/UECliTool/Public/Actions/MyActions.h
 class FMyNewAction : public FBlueprintNodeAction
 {
 public:
-    virtual TSharedPtr<FJsonObject> ExecuteInternal(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context) override;
+	virtual TSharedPtr<FJsonObject> ExecuteInternal(
+		const TSharedPtr<FJsonObject>& Params,
+		FMCPEditorContext& Context) override;
+
 protected:
-    virtual bool Validate(const TSharedPtr<FJsonObject>& Params, FMCPEditorContext& Context, FString& OutError) override;
-    virtual FString GetActionName() const override { return TEXT("my_new_action"); }
+	virtual bool Validate(
+		const TSharedPtr<FJsonObject>& Params,
+		FMCPEditorContext& Context,
+		FString& OutError) override;
+
+	virtual FString GetActionName() const override
+	{
+		return TEXT("my_new_action");
+	}
 };
 ```
 
-在 `MCPBridge.cpp` 的 `RegisterActions()` 中注册：
+Register:
+
 ```cpp
 ActionHandlers.Add(TEXT("my_new_action"), MakeShared<FMyNewAction>());
 ```
 
-### 第 2 步：Python ActionDef
+Python registry entry:
 
-在 `Python/ue_cli_tool/registry/actions.py` 中添加：
 ```python
 ActionDef(
-    id="domain.my_new_action",
-    command="my_new_action",
-    tags=("domain", "keyword"),
-    description="动作说明",
-    input_schema={
-        "type": "object",
-        "properties": {
-            "param1": {"type": "string", "description": "..."},
-        },
-        "required": ["param1"],
-    },
-    examples=({"param1": "value"},),
+	id="domain.my_new_action",
+	command="my_new_action",
+	tags=("domain", "keyword"),
+	description="Describe what the action does.",
+	input_schema={
+		"type": "object",
+		"properties": {
+			"param1": {"type": "string", "description": "Input parameter."},
+		},
+		"required": ["param1"],
+	},
+	examples=({"param1": "value"},),
 )
 ```
 
-在 `register_all_actions()` 中调用 `registry.register_many(_MY_ACTIONS)`。
+No CLI server changes should be needed. The parser derives positional arguments
+from the registry schema.
 
-### 第 3 步：编译验证
+## Verify A New Action
 
-```
-Engine\Build\BatchFiles\Build.bat <ProjectName>Editor Win64 Development ...
-```
-
-无需修改服务器代码，`ue_query(query="search ...")` 和 `ue_cli` 自动识别新动作。
-
----
-
-## 使用 ue_python_exec 代替 C++ Action
-
-在新增编辑器操作时，**优先使用 `ue_python_exec`**，仅在 Python API 无法实现时才编写 C++ Action。
-
-### 适合 ue_python_exec 的场景
-
-- Actor 增删改查、属性设置
-- 蓝图创建、编译、设置属性
-- 材质创建、连接表达式、编译
-- 视口控制、PIE 启停
-- 资产管理（列出、重命名、保存）
-- 任何 `unreal.*` 模块能直接完成的操作
-
-### 仍需 C++ Action 的场景
-
-- 蓝图图节点操作（`node.*`、`graph.*`）— 需要 `UEdGraph` / `UK2Node` 等非 Python 暴露的类
-- AnimGraph 操作 — `UAnimGraphNode_*` 未暴露 Python API
-- UMG Widget 蓝图操作 — `UWidgetBlueprint` 编辑器 API 未暴露
-- 材质分析/诊断 — 需要遍历 `UMaterialExpression` 内部图结构
-- 高性能批量操作 — C++ 直接操作避免 Python 解释器开销
-
-### 迁移示例
-
-```python
-# 旧方式：C++ get_actors Action
-# ue_actions_run(action_id="editor.get_actors", params={})
-
-# 新方式：ue_python_exec
-ue_python_exec(code="""
-import unreal
-actors = unreal.EditorLevelLibrary.get_all_level_actors()
-_result = [{"name": a.get_name(), "class": a.get_class().get_name()} for a in actors]
-""")
+```powershell
+.\Python\.venv\Scripts\python.exe .\Python\ue.py query "search my_new_action"
+.\Python\.venv\Scripts\python.exe .\Python\ue.py query "help my_new_action"
+.\Python\.venv\Scripts\python.exe .\Python\ue.py run "my_new_action value"
 ```
 
-```python
-# 旧方式：C++ create_blueprint Action
-# ue_actions_run(action_id="blueprint.create", params={"name": "BP_Test", "parent_class": "Actor"})
+Use `--json` for exact test assertions:
 
-# 新方式：ue_python_exec
-ue_python_exec(code="""
-import unreal
-factory = unreal.BlueprintFactory()
-factory.set_editor_property("parent_class", unreal.Actor)
-asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
-bp = asset_tools.create_asset("BP_Test", "/Game/Blueprints", unreal.Blueprint, factory)
-_result = {"path": bp.get_path_name()} if bp else {"error": "Failed to create blueprint"}
-""")
+```powershell
+.\Python\.venv\Scripts\python.exe .\Python\ue.py run "my_new_action value" --json
 ```
 
-详细的 Python API 用法和迁移对照表见 [python-api skill](../Python/ue_cli_tool/skills/python-api.md)。
+## Response Formatting
 
----
+Do not make C++ actions responsible for Codex-facing prose.
 
-## Commandlet 模式（CLI/CI）
+Return raw action fields from C++:
 
-`UEEditorMCPCommandlet` 允许在无窗口模式下直接执行命令，适用于 CI/CD 管线和自动化脚本。
-
-### 基本用法
-
-```bash
-# 单条命令执行
-UnrealEditor-Cmd.exe YourProject.uproject -run=UEEditorMCP -command=exec_python -params="{\"code\":\"import unreal; _result=unreal.SystemLibrary.get_engine_version()\"}" -json
-
-# JSON 格式输出（便于脚本解析）
-# 输出格式：JSON_BEGIN\n{...}\nJSON_END
+```json
+{"success": true, "asset_path": "/Game/BP_Test", "node_count": 12}
 ```
 
-### 批量执行
+Let Python handle public output:
 
-```bash
-# 从 JSON 文件读取命令列表并顺序执行
-UnrealEditor-Cmd.exe YourProject.uproject -run=UEEditorMCP -batch -file=commands.json -json
+- `connection.py` normalizes transport compatibility.
+- `runtime.py` executes CLI/query requests.
+- `formatter.py` converts internal envelopes to text, JSON, or raw output.
+- `daemon.py` owns the persistent UE connection.
+
+Add command-specific formatting in `formatter.py` only when the default summary
+is too noisy or hides important identifiers.
+
+## CLI-first Rules
+
+- Do not add new MCP tools.
+- Do not require model-authored JSON unless the command itself needs object data.
+- Keep default output readable text.
+- Keep `--json` stable enough for tests and scripts.
+- Keep `--raw` for debugging only.
+- Use `query "help <command>"` as the source of truth for syntax.
+
+## Commandlet Mode
+
+`UEEditorMCPCommandlet` remains available for CI and headless editor tasks:
+
+```powershell
+UnrealEditor-Cmd.exe YourProject.uproject `
+  -run=UEEditorMCP `
+  -command=exec_python `
+  -params="{\"code\":\"import unreal; _result=unreal.SystemLibrary.get_engine_version()\"}" `
+  -json
 ```
 
-`commands.json` 格式：
+Batch commandlet input:
+
 ```json
 [
   {"command": "exec_python", "params": {"code": "import unreal; _result = 'hello'"}},
@@ -136,52 +125,36 @@ UnrealEditor-Cmd.exe YourProject.uproject -run=UEEditorMCP -batch -file=commands
 ]
 ```
 
-### 帮助和 Schema 导出
+Commandlet output with `-json` is wrapped in `JSON_BEGIN` / `JSON_END` markers.
 
-```bash
-# 列出所有可用命令
-UnrealEditor-Cmd.exe YourProject.uproject -run=UEEditorMCP -help
+## Tests
 
-# 导出所有命令的 JSON Schema
-UnrealEditor-Cmd.exe YourProject.uproject -run=UEEditorMCP -format=json
+Run Python tests:
 
-# 导出为 Markdown 格式
-UnrealEditor-Cmd.exe YourProject.uproject -run=UEEditorMCP -format=markdown
+```powershell
+cd D:\UnrealGame\Lyra_56\Plugins\UEEditorMCP
+.\Python\.venv\Scripts\python.exe -m pytest Python\tests -q
 ```
 
-### 注意事项
+Current key test areas:
 
-- Commandlet 复用 `MCPBridge` 的 `ActionHandlers` 和 `ExecuteCommandSafe`，行为与 MCP 调用完全一致
-- 支持 `exec_python`，可在 CI 中执行任意 Python 脚本
-- 输出带 `-json` 标志时包裹在 `JSON_BEGIN` / `JSON_END` 标记中，便于外部脚本解析
-- Commandlet 继承编辑器的 SEH + C++ 异常保护
+- CLI parser and shorthand syntax.
+- Project config load/merge/save.
+- Persistent connection and circuit breaker behavior.
+- Runtime command/query handling.
+- Daemon request handling.
+- Text/JSON/raw formatter contracts.
+- Registry/schema consistency.
+- Skill metadata and workflow docs.
 
----
+## Documentation
 
-## 编辑器快捷键
+When changing runtime behavior, update:
 
-- 蓝图编辑器 `Auto Layout`：`Ctrl+Alt+L`（有选区布局选区，无选区布局整图）
-- 材质编辑器 `Auto Layout`：`Edit` 菜单中的 `Auto Layout` 菜单项
+- `README.md`
+- `docs/architecture.md`
+- `docs/installation.md`
+- `docs/actions.md`
+- `skills/unreal-ue-cli/SKILL.md`
 
----
-
-## 测试
-
-```bash
-cd Plugins/UECliTool
-python -m pytest tests/ -v
-```
-
-当前测试覆盖（108+ 项）：
-- `test_cli_parser.py` — CLI 解析器完整测试（41 用例）
-- `tests/test_cli_parser_v04.py` — v0.4.0 CLI 语法扩展（数组/对象简写，属性测试 + 单元测试，27 用例）
-- `tests/test_config.py` — ProjectConfig 加载/保存/合并（属性测试 + 单元测试，11 用例）
-- `tests/test_connection.py` — Circuit Breaker、重连、响应解析、超时分层（属性测试 + 单元测试，19 用例）
-- `tests/test_pipeline.py` — BatchContext、AsyncSubmitter（属性测试 + 单元测试，22 用例）
-- `tests/test_command_proxy.py` — CommandProxy 路由、缓存、错误处理（属性测试 + 单元测试，11 用例）
-- `tests/test_server.py` — Server 集成测试（Mock TCP，18 用例）
-- `test_animgraph.py` — AnimGraph ActionDef 结构、capabilities、JSON round-trip
-- `test_skills.py` — Skill 系统完整性
-- `test_schema_contract.py` — Python ↔ C++ 接口一致性
-- `test_context.py` — ContextStore 功能
-- `test_materials_analysis.py` — 材质分析 Action 搜索与完整性
+Keep legacy MCP notes short and clearly marked as compatibility-only.

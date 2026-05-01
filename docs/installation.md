@@ -1,181 +1,178 @@
-# 安装与配置
+# Installation
 
-## 环境要求
+UECliTool v0.5.0 is CLI-first. The normal path is:
 
-- Unreal Engine 5.6+（内置 Python 3.11+，无需另行安装）
-- Visual Studio 2022
-- 任意兼容 MCP 的 AI 客户端（Claude Desktop、VS Code + Copilot、Cursor 等）
-
-## 第 1 步：编译 C++ 插件
-
-插件位于 `Plugins/UECliTool/`，随项目一起编译即可。用 Unreal Editor 打开 `.uproject` 或执行命令行编译：
-
-```
-Engine\Build\BatchFiles\Build.bat <ProjectName>Editor Win64 Development <Project>.uproject -waitmutex
+```text
+Codex or user -> Python/ue.py -> local daemon -> Unreal Editor TCP bridge
 ```
 
-编译成功后，打开 Unreal Editor 时插件自动在 `127.0.0.1:55558` 启动 TCP 服务器。可通过 `-MCPPort=<port>` 命令行参数指定其他端口。
+The legacy MCP server is still available, but it is no longer the default
+model-facing entrypoint.
 
-## 第 2 步：Python 环境配置
+## Requirements
 
-### 自动配置（推荐）
+- Unreal Engine 5.6 or newer.
+- Visual Studio 2022 for C++ builds on Windows.
+- The project plugin at `Plugins/UEEditorMCP`.
+- No external Python install is required when Unreal's bundled Python is
+  available.
+
+## Build The Plugin
+
+Build the project editor target so Unreal compiles the plugin:
 
 ```powershell
-cd Plugins/UECliTool
+D:\UnrealEngine5\UnrealEngine\Engine\Build\BatchFiles\Build.bat `
+  Lyra_56Editor Win64 Development `
+  D:\UnrealGame\Lyra_56\Lyra_56.uproject -waitmutex
+```
+
+Open the editor with the configured bridge port:
+
+```powershell
+D:\UnrealEngine5\UnrealEngine\Engine\Binaries\Win64\UnrealEditor.exe `
+  D:\UnrealGame\Lyra_56\Lyra_56.uproject -MCPPort=55558
+```
+
+The C++ bridge name still uses `MCPPort` for compatibility.
+
+## Setup Python
+
+From the plugin directory:
+
+```powershell
+cd D:\UnrealGame\Lyra_56\Plugins\UEEditorMCP
 .\setup_mcp.ps1
 ```
 
-脚本自动完成：
-1. 检测 UE 内置 Python（`Engine/Binaries/ThirdParty/Python3/Win64/python.exe`）
-2. 在 `Python/.venv` 创建虚拟环境并安装 `mcp` 包
-3. 将引擎路径和项目路径写入 `ue_mcp_config.yaml`（已有配置时合并而非覆盖）
-4. 在项目根目录生成 `.vscode/mcp.json`
+The setup script:
 
-### 手动配置
+1. Locates Unreal's bundled Python.
+2. Creates `Python/.venv`.
+3. Installs Python dependencies.
+4. Writes or merges `ue_mcp_config.yaml`.
+5. Verifies the CLI entrypoint.
 
-```bash
-cd Plugins/UECliTool/Python
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-## 第 3 步：MCP 客户端配置
-
-MCP 客户端通过 stdio 启动 Python 服务，Python 服务通过 TCP 连接 UE 插件。
-
-### 通用配置模板
-
-核心配置格式（适用于所有 MCP 客户端）：
-
-```json
-{
-  "mcpServers": {
-    "ue-cli-tool": {
-      "command": "<venv-python-path>",
-      "args": ["-m", "ue_cli_tool.server"],
-      "env": {
-        "PYTHONPATH": "<plugin-path>/Python"
-      }
-    }
-  }
-}
-```
-
-将 `<venv-python-path>` 替换为虚拟环境中的 Python 可执行文件路径，`<plugin-path>` 替换为插件目录的实际路径。
-
-### VS Code（.vscode/mcp.json）
-
-`setup_mcp.ps1` 会自动生成此文件：
-
-```jsonc
-{
-  "servers": {
-    "ue-cli-tool": {
-      "command": "./Plugins/UECliTool/Python/.venv/Scripts/python.exe",
-      "args": ["-m", "ue_cli_tool.server"],
-      "env": { "PYTHONPATH": "./Plugins/UECliTool/Python" }
-    }
-  }
-}
-```
-
-### Claude Desktop
-
-编辑 `claude_desktop_config.json`（通常位于 `%APPDATA%/Claude/`）：
-
-```json
-{
-  "mcpServers": {
-    "ue-cli-tool": {
-      "command": "D:/YourProject/Plugins/UECliTool/Python/.venv/Scripts/python.exe",
-      "args": ["-m", "ue_cli_tool.server"],
-      "env": {
-        "PYTHONPATH": "D:/YourProject/Plugins/UECliTool/Python"
-      }
-    }
-  }
-}
-```
-
-> **注意：** Claude Desktop 需要使用**绝对路径**。
-
-### Cursor
-
-编辑 `.cursor/mcp.json`（项目根目录）：
-
-```json
-{
-  "mcpServers": {
-    "ue-cli-tool": {
-      "command": "./Plugins/UECliTool/Python/.venv/Scripts/python.exe",
-      "args": ["-m", "ue_cli_tool.server"],
-      "env": {
-        "PYTHONPATH": "./Plugins/UECliTool/Python"
-      }
-    }
-  }
-}
-```
-
-### pip install 方式
-
-如果通过 `pip install -e .` 安装了包，可以简化配置：
-
-```json
-{
-  "mcpServers": {
-    "ue-cli-tool": {
-      "command": "ue-cli-tool"
-    }
-  }
-}
-```
-
-## 第 4 步：启动
-
-1. 打开 Unreal Editor（插件自动启动 TCP 服务器，端口 55558）
-2. 打开 AI 客户端 — MCP 服务通过 stdio 启动并自动连接
-3. 使用 `ue_cli` / `ue_query` 两个工具控制编辑器
-
-### 验证连接
-
-```
-ue_query(query="health")
-```
-
-如果返回 `connected` 状态，说明一切就绪。
-
-## 常见问题
-
-### 多编辑器实例
-
-如需同时运行多个 UE 编辑器实例并分别通过 MCP 控制，为每个项目在 `ue_mcp_config.yaml` 中设置不同的 `tcp_port`：
+The configuration file keeps its historical name:
 
 ```yaml
-# 项目 A
+engine_root: D:/UnrealEngine5/UnrealEngine
+project_root: D:/UnrealGame/Lyra_56
 tcp_port: 55558
-
-# 项目 B
-tcp_port: 55559
+daemon_port: 55559
+auto_start_daemon: true
 ```
 
-C++ 插件端也可通过命令行参数覆盖：`-MCPPort=55559`
+Use different `tcp_port` and `daemon_port` values for multiple editor
+instances.
 
-### TCP 连接失败
+## Verify CLI Runtime
 
-- 确认 Unreal Editor 已打开且插件加载成功（查看 Output Log 中的 `MCP Server listening on port 55558`）
-- 检查防火墙是否阻止了本地 TCP 连接
-- 端口 55558 是否被占用（`netstat -an | findstr 55558`）
+```powershell
+$Plugin = "D:\UnrealGame\Lyra_56\Plugins\UEEditorMCP"
+$Py = "$Plugin\Python\.venv\Scripts\python.exe"
+$Ue = "$Plugin\Python\ue.py"
 
-### Python 环境问题
+& $Py $Ue doctor
+& $Py $Ue daemon status
+& $Py $Ue query health
+& $Py $Ue run "get_context"
+```
 
-- 确认虚拟环境存在：`Plugins/UECliTool/Python/.venv/`
-- 确认 `mcp` 包已安装：`.venv/Scripts/pip list | findstr mcp`
-- 如果 `setup_mcp.ps1` 报错，检查 UE 安装路径是否正确
+The daemon auto-starts for `run`, `query`, and `doctor` unless
+`auto_start_daemon: false` is set.
 
-### MCP 工具不可见
+## Install The Codex Skill
 
-- 确认客户端配置文件路径正确
-- 重启 AI 客户端以重新加载 MCP 配置
-- 使用 `ue_query(query="health")` 测试连接
+The plugin ships a reusable skill at `skills/unreal-ue-cli`:
+
+```powershell
+$CodexSkills = "$env:USERPROFILE\.codex\skills"
+New-Item -ItemType Directory -Force $CodexSkills | Out-Null
+Copy-Item .\skills\unreal-ue-cli (Join-Path $CodexSkills "unreal-ue-cli") -Recurse -Force
+```
+
+After installation, Codex can use `$unreal-ue-cli` or trigger the skill
+naturally for Unreal Editor automation tasks.
+
+## Output Modes
+
+Default output is text:
+
+```text
+OK get_context
+Asset path: /Game/...
+Status: ok
+```
+
+Use `--json` for scripts and tests:
+
+```powershell
+& $Py $Ue run "get_context" --json
+```
+
+Use `--raw` only for low-level debugging:
+
+```powershell
+& $Py $Ue run "get_context" --raw
+```
+
+## Troubleshooting
+
+### Daemon Not Running
+
+```powershell
+& $Py $Ue daemon start
+& $Py $Ue daemon status
+```
+
+### Unreal Bridge Not Reachable
+
+Check the editor process and port:
+
+```powershell
+Get-Process | Where-Object { $_.ProcessName -like "*UnrealEditor*" }
+Get-NetTCPConnection -LocalPort 55558 -ErrorAction SilentlyContinue
+```
+
+Start the editor with the configured `-MCPPort=<tcp_port>`.
+
+### CLI Parse Error
+
+Ask the CLI for command help:
+
+```powershell
+& $Py $Ue query "help <command>"
+& $Py $Ue query "search <keyword>"
+```
+
+### Large Output
+
+Prefer command-specific detail or compact flags first. Use `--json` when exact
+fields are required.
+
+## Legacy MCP
+
+For older AI clients, the legacy two-tool MCP server can still be launched:
+
+```powershell
+.\Python\.venv\Scripts\python.exe -m ue_cli_tool.server
+```
+
+A compatible MCP config uses:
+
+```json
+{
+  "mcpServers": {
+    "ue-cli-tool": {
+      "command": "D:/Project/Plugins/UEEditorMCP/Python/.venv/Scripts/python.exe",
+      "args": ["-m", "ue_cli_tool.server"],
+      "env": {
+        "PYTHONPATH": "D:/Project/Plugins/UEEditorMCP/Python"
+      }
+    }
+  }
+}
+```
+
+Keep this path for compatibility only. New Codex usage should call `Python/ue.py`.

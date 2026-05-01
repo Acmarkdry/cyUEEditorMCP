@@ -1,46 +1,77 @@
 # Contributing
 
+## Runtime Direction
+
+UECliTool is CLI-first as of v0.5.0. New user-facing workflows should go
+through:
+
+```text
+Python/ue.py -> ue_cli_tool.daemon -> PersistentUnrealConnection -> UE bridge
+```
+
+Keep MCP support as a legacy compatibility path only.
+
 ## Code Style
 
 ### Python
 
-- **Encoding:** UTF-8 (no BOM). Every `.py` file must include `# coding: utf-8` as the first or second line.
-- **Indentation:** Tabs (not spaces). This is enforced by `.editorconfig`.
-- **Line endings:** LF (`\n`). Configured via `.gitattributes`.
+- Use UTF-8 without BOM.
+- Keep `# coding: utf-8` in the first or second line of every `.py` file.
+- Use tabs for indentation, following `.editorconfig`.
+- Keep default CLI output human-readable text.
+- Use `--json` only for stable machine-readable contracts.
 
 ### C++
 
 - Follow Unreal Engine coding standards.
-- Use tabs for indentation (consistent with UE convention).
+- Use tabs for indentation.
+- Keep editor mutations transaction-aware through `FEditorAction`.
 
-### Configuration Files
-
-The project includes `.editorconfig` and `.gitattributes` to enforce these rules automatically. Most editors (VS Code, Visual Studio, etc.) respect `.editorconfig` out of the box.
-
-## CI Checks
-
-GitHub Actions runs the following checks on Python files:
-
-1. **UTF-8 validity** — All `.py` files must be valid UTF-8
-2. **No BOM** — UTF-8 BOM (`\xEF\xBB\xBF`) is not allowed
-3. **Coding header** — `# coding: utf-8` must be present in the first two lines
-4. **Syntax check** — `python -m py_compile` on all `.py` files
-
-## Adding a New Action
+## Adding A New Action
 
 See [docs/development.md](docs/development.md) for the full guide. Summary:
 
-1. **C++ side:** Create a new `FEditorAction` subclass, register in `MCPBridge.cpp`
-2. **Python side:** Add an `ActionDef` entry in `registry/actions.py`
-3. Compile and verify — the new command auto-appears in `ue_query(query="help")`
+1. Create a new `FEditorAction` subclass.
+2. Register it in `MCPBridge.cpp`.
+3. Add an `ActionDef` entry in `Python/ue_cli_tool/registry/actions.py`.
+4. Verify it through the CLI:
+
+```powershell
+.\Python\.venv\Scripts\python.exe .\Python\ue.py query "search my_new_action"
+.\Python\.venv\Scripts\python.exe .\Python\ue.py query "help my_new_action"
+.\Python\.venv\Scripts\python.exe .\Python\ue.py run "my_new_action value"
+```
+
+Do not add new MCP tools for new actions.
+
+## Tests
+
+Run the Python suite before committing:
+
+```powershell
+.\Python\.venv\Scripts\python.exe -m pytest Python\tests -q
+```
+
+Run `git diff --check` to catch whitespace issues.
+
+## Documentation
+
+When behavior changes, update:
+
+- `README.md`
+- `docs/architecture.md`
+- `docs/installation.md`
+- `docs/actions.md`
+- `docs/development.md`
+- `skills/unreal-ue-cli/SKILL.md`
 
 ## Commit Messages
 
-Use clear, descriptive commit messages in English. Examples:
+Use clear English commit messages:
 
-```
-feat: add detail_level support to get_blueprint_summary
-fix: resolve UTF-8 encoding corruption in Python files
-docs: update installation guide with client-specific examples
-chore: remove archived openspec documents
+```text
+feat: add text formatter for material diagnostics
+fix: preserve daemon_port during setup merge
+docs: refresh cli-first installation guide
+chore: remove obsolete kiro specs
 ```

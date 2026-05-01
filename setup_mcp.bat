@@ -1,8 +1,8 @@
 @echo off
 REM ============================================================================
 REM  UECliTool - One-Click Python Setup
-REM  Automatically finds UE engine's built-in Python, creates a venv,
-REM  and installs the MCP package. No external Python installation required.
+REM  Automatically finds UE engine's built-in Python and creates a venv
+REM  for the CLI-first runtime. No external Python installation required.
 REM ============================================================================
 
 setlocal EnableDelayedExpansion
@@ -227,7 +227,7 @@ echo   Created: %VENV_DIR%
 echo.
 
 REM --- Step 3: Install dependencies ---
-echo [3/4] Installing MCP package...
+echo [3/4] Installing Python dependencies...
 
 "%VENV_DIR%\Scripts\pip.exe" install -r "%PYTHON_DIR%\requirements.txt" --quiet
 if %ERRORLEVEL% neq 0 (
@@ -238,33 +238,24 @@ if %ERRORLEVEL% neq 0 (
 echo   Dependencies installed successfully.
 echo.
 
-REM --- Step 4: Generate mcp.json ---
-echo [4/4] Generating mcp.json...
-echo.
-echo  Generating .vscode/mcp.json...
-
-set "VSCODE_DIR=%PROJECT_ROOT%\.vscode"
-if not exist "%VSCODE_DIR%" mkdir "%VSCODE_DIR%"
-
-set "MCP_JSON=%VSCODE_DIR%\mcp.json"
-set "VP=%VENV_DIR:\=/%"
-set "PP=%PYTHON_DIR:\=/%"
-
->  "%MCP_JSON%" echo {
->> "%MCP_JSON%" echo   "servers": {
->> "%MCP_JSON%" echo     "ue-cli-tool": {
->> "%MCP_JSON%" echo       "command": "%VP%/Scripts/python.exe",
->> "%MCP_JSON%" echo       "args": ["-m", "ue_cli_tool.server"],
->> "%MCP_JSON%" echo       "env": { "PYTHONPATH": "%PP%" }
->> "%MCP_JSON%" echo     }
->> "%MCP_JSON%" echo   }
->> "%MCP_JSON%" echo }
-
-echo   Generated: %MCP_JSON%
+REM --- Step 4: Validate CLI entrypoint ---
+echo [4/4] Validating CLI-first runtime...
+"%VENV_DIR%\Scripts\python.exe" "%PYTHON_DIR%\ue.py" --help >nul 2>nul
+if %ERRORLEVEL% neq 0 (
+    echo   ERROR: CLI entrypoint failed: %PYTHON_DIR%\ue.py
+    pause
+    exit /b 1
+)
+echo   CLI entrypoint ready: %PYTHON_DIR%\ue.py
 echo.
 echo ============================================
 echo  Done! No external Python installation needed.
-echo  Configured server: ue-cli-tool
+echo  CLI runtime: %PYTHON_DIR%\ue.py
 echo ============================================
+echo.
+echo Next steps:
+echo   1. Open your UE project in the Editor.
+echo   2. Run "%VENV_DIR%\Scripts\python.exe" "%PYTHON_DIR%\ue.py" doctor
+echo   3. Run "%VENV_DIR%\Scripts\python.exe" "%PYTHON_DIR%\ue.py" query health
 
 pause

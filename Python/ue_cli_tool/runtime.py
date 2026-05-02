@@ -140,26 +140,34 @@ def handle_cli(
 		result["_cli_line"] = cmd.raw_line
 		return result
 
-	batch = parser.to_batch_commands(parsed)
-	if len(batch) > _MAX_BATCH:
+	if len(parsed.commands) > _MAX_BATCH:
 		return {
 			"success": False,
-			"error": f"Max {_MAX_BATCH} commands per batch, got {len(batch)}",
+			"error": f"Max {_MAX_BATCH} commands per batch, got {len(parsed.commands)}",
 			"error_type": "batch_too_large",
 		}
 
-	t0 = time.perf_counter()
-	result = send("batch_execute", {"commands": batch, "continue_on_error": True})
-	elapsed = (time.perf_counter() - t0) * 1000
-	batch_results = result.get("results", [])
-	for i, br in enumerate(batch_results):
-		if i < len(parsed.commands) and isinstance(br, dict):
-			br["_cli_line"] = parsed.commands[i].raw_line
-	per_ms = elapsed / max(len(batch), 1)
-	for i, cmd in enumerate(parsed.commands):
-		sub = batch_results[i] if i < len(batch_results) else {"success": False}
-		log(cmd.command, cmd.params, sub, per_ms)
-	return result
+	results: list[dict[str, Any]] = []
+	all_ok = True
+	for cmd in parsed.commands:
+		t0 = time.perf_counter()
+		try:
+			result = send(cmd.command, cmd.params or None)
+		except Exception as exc:
+			result = {"success": False, "error": str(exc), "error_type": "transport_error"}
+		elapsed = (time.perf_counter() - t0) * 1000
+		log(cmd.command, cmd.params, result, elapsed)
+		result["_cli_line"] = cmd.raw_line
+		if result.get("success") is False:
+			all_ok = False
+		results.append(result)
+
+	return {
+		"success": all_ok,
+		"total": len(parsed.commands),
+		"executed": len(results),
+		"results": results,
+	}
 
 
 def handle_query(

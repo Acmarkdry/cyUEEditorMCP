@@ -39,6 +39,7 @@ class UEDaemon:
 		self.config = config or load_config()
 		self.context = ContextStore(context_dir())
 		self.connection = PersistentUnrealConnection(ConnectionConfig(port=self.config.tcp_port))
+		self._connection_lock = threading.RLock()
 		_wire_metrics(self.connection)
 		self.connection.on_state_change = self.context._on_ue_state_change
 		self._stop = threading.Event()
@@ -140,8 +141,8 @@ class UEDaemon:
 			result = runtime.handle_query(
 				{"query": query},
 				send_command_func=self._send_command,
-				connection_health_func=self.connection.get_health,
-				ping_func=self.connection.ping,
+				connection_health_func=self._connection_health,
+				ping_func=self._ping,
 			)
 			if isinstance(result, str):
 				result = {"success": True, "text": result}
@@ -153,9 +154,18 @@ class UEDaemon:
 		)
 
 	def _send_command(self, command_type: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
-		if not self.connection.is_connected:
-			self.connection.connect()
-		return self.connection.send_command(command_type, params).to_dict()
+		with self._connection_lock:
+			if not self.connection.is_connected:
+				self.connection.connect()
+			return self.connection.send_command(command_type, params).to_dict()
+
+	def _connection_health(self) -> dict[str, Any]:
+		with self._connection_lock:
+			return self.connection.get_health()
+
+	def _ping(self) -> bool:
+		with self._connection_lock:
+			return self.connection.ping()
 
 	def _log_command(self, action_id: str, params: dict | None, result: dict, elapsed_ms: float) -> None:
 		runtime._log_command(action_id, params, result, elapsed_ms)

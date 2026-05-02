@@ -112,6 +112,7 @@ void UMCPBridge::RegisterActions()
 	ActionHandlers.Add(TEXT("get_unreal_logs"), MakeShared<FGetUnrealLogsAction>());
 	ActionHandlers.Add(TEXT("is_ready"), MakeShared<FEditorIsReadyAction>());
 	ActionHandlers.Add(TEXT("request_shutdown"), MakeShared<FRequestEditorShutdownAction>());
+	ActionHandlers.Add(TEXT("batch_execute"), MakeShared<FBatchExecuteAction>());
 
 	// =========================================================================
 	// Layout Actions - Auto-arrange Blueprint graph nodes

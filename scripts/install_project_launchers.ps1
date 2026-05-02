@@ -1,3 +1,4 @@
+[CmdletBinding(PositionalBinding = $false)]
 param(
 	[string] $ProjectRoot
 )
@@ -13,15 +14,36 @@ $ProjectRoot = (Resolve-Path $ProjectRoot).Path
 $PluginRoot = (Resolve-Path $PluginRoot).Path
 
 $ps1 = @"
+[CmdletBinding(PositionalBinding = `$false)]
 param(
 	[Parameter(ValueFromRemainingArguments = `$true)]
-	[string[]] `$Arguments
+	[string[]] `$Arguments,
+
+	[Parameter(ValueFromPipeline = `$true)]
+	[AllowEmptyString()]
+	[string] `$PipelineInput
 )
 
-`$ErrorActionPreference = "Stop"
-`$PluginRoot = Join-Path `$PSScriptRoot "Plugins\UEEditorMCP"
-& (Join-Path `$PluginRoot "ue.ps1") @Arguments
-exit `$LASTEXITCODE
+begin {
+	`$ErrorActionPreference = "Stop"
+	`$InputLines = New-Object System.Collections.Generic.List[string]
+}
+
+process {
+	if (`$PSBoundParameters.ContainsKey("PipelineInput")) {
+		`$InputLines.Add(`$PipelineInput)
+	}
+}
+
+end {
+	`$PluginRoot = Join-Path `$PSScriptRoot "Plugins\UEEditorMCP"
+	if (`$InputLines.Count -gt 0) {
+		(`$InputLines -join [Environment]::NewLine) | & (Join-Path `$PluginRoot "ue.ps1") @Arguments
+	} else {
+		& (Join-Path `$PluginRoot "ue.ps1") @Arguments
+	}
+	exit `$LASTEXITCODE
+}
 "@
 
 $cmd = @"

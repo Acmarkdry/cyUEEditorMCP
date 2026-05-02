@@ -1,6 +1,9 @@
 # coding: utf-8
 from __future__ import annotations
 
+import time
+from concurrent.futures import ThreadPoolExecutor
+
 from ue_cli_tool.config import ProjectConfig
 from ue_cli_tool.daemon import UEDaemon
 
@@ -104,3 +107,32 @@ def test_daemon_unknown_request_is_error(monkeypatch):
 
 	assert response["success"] is False
 	assert response["error"]["code"] == "UNKNOWN_DAEMON_REQUEST"
+
+
+def test_daemon_serializes_shared_ue_connection(monkeypatch):
+	class _SlowConnection(_FakeConnection):
+		def __init__(self):
+			super().__init__()
+			self.active = 0
+			self.max_active = 0
+
+		def send_command(self, command_type, params=None):
+			self.active += 1
+			self.max_active = max(self.max_active, self.active)
+			try:
+				time.sleep(0.02)
+				return super().send_command(command_type, params)
+			finally:
+				self.active -= 1
+
+	connection = _SlowConnection()
+	monkeypatch.setattr("ue_cli_tool.daemon.ContextStore", lambda *a, **k: _FakeContext())
+	monkeypatch.setattr("ue_cli_tool.daemon.PersistentUnrealConnection", lambda *a, **k: connection)
+	monkeypatch.setattr("ue_cli_tool.daemon._wire_metrics", lambda *a, **k: None)
+	daemon = UEDaemon(ProjectConfig(tcp_port=55558, daemon_port=55559))
+
+	with ThreadPoolExecutor(max_workers=4) as pool:
+		results = list(pool.map(lambda i: daemon._send_command("ping", {"i": i}), range(8)))
+
+	assert all(result["success"] for result in results)
+	assert connection.max_active == 1
